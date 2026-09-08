@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Data + models (regenerable; keep the repo small)
+data/*.db
+data/*.sqlite
+data/raw/
+models/*.onnx
+models/*.pkl
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
