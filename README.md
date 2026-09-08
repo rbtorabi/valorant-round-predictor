@@ -43,9 +43,13 @@ Two pages are needed per match, because they carry different halves of a round:
 | Page | Provides |
 | --- | --- |
 | match page | winner, side, and win condition (elim / spike / defuse / time) |
-| `?tab=economy` | exact loadout value and bank for both teams, per round |
+| `?tab=economy` | loadout value and bank for both teams, per round |
 
-They join on `(game_id, round_num)`. Loadout value is bucketed into VLR's own
+They join on `(game_id, round_num)`. Loadout value and bank are different
+numbers and both are kept: loadout is what a team is holding and drives who wins
+the round, bank is what they have left and drives what they can afford next.
+
+Loadout value is bucketed into VLR's own
 buy types — eco `<$5k`, semi-eco `$5-10k`, semi-buy `$10-20k`, full-buy `$20k+`.
 
 **Coverage is uneven, and that is upstream.** Lower-tier events (smaller
@@ -72,7 +76,7 @@ must match the economy table's row count, and no round may be missing credits.
 
 ```
 scraper/   fetch layer, schema, parsers
-model/     feature engineering, training, evaluation
+model/     economy simulator, features, training, evaluation
 data/      SQLite db and raw HTML cache (gitignored)
 notebooks/ exploratory analysis
 web/       Next.js app (not yet created)

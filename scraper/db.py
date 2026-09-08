@@ -45,8 +45,10 @@ CREATE TABLE IF NOT EXISTS rounds (
     def_score_pre  INTEGER NOT NULL,
     atk_buy        TEXT,   -- eco | semi-eco | semi-buy | full-buy
     def_buy        TEXT,
-    atk_credits    INTEGER,
-    def_credits    INTEGER,
+    atk_loadout    INTEGER,   -- value of guns + armour held
+    def_loadout    INTEGER,
+    atk_bank       INTEGER,   -- credits left after buying
+    def_bank       INTEGER,
     winner_side    TEXT NOT NULL CHECK (winner_side IN ('atk', 'def')),
     win_condition  TEXT,   -- elim | spike | defuse | time
     UNIQUE (map_id, round_num)

@@ -3,7 +3,11 @@
 Two pages are needed per match and they carry different halves of a round:
 
 * the main match page  -> win condition (elim / spike / defuse / time)
-* the ?tab=economy page -> exact loadout value and bank for both teams
+* the ?tab=economy page -> loadout value and bank for both teams
+
+Loadout value is the worth of guns and armour a team is holding; bank is the
+credits they have left. They are different numbers and both matter: loadout
+drives who wins the round, bank drives what they can afford next.
 
 They are joined on (game_id, round_num).
 
@@ -28,6 +32,15 @@ WIN_CONDITIONS = {
 
 def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _bank_value(node: Node) -> int | None:
+    """VLR prints bank in thousands, e.g. "4.3k" -> 4300."""
+    raw = _clean(node.text()).lower().replace("k", "")
+    try:
+        return int(round(float(raw) * 1000))
+    except ValueError:
+        return None
 
 
 def buy_type(loadout: int | None) -> str | None:
@@ -169,9 +182,13 @@ def _round_economy(block: Node) -> dict[int, dict]:
             digits = re.sub(r"[^\d]", "", raw)
             return int(digits) if digits else None
 
+        banks = [_bank_value(b) for b in cell.css("div.bank")]
+
         econ[rnum] = {
             "loadout_a": loadout(squares[0]),
             "loadout_b": loadout(squares[1]),
+            "bank_a": banks[0] if len(banks) > 0 else None,
+            "bank_b": banks[1] if len(banks) > 1 else None,
         }
     return econ
 
@@ -214,6 +231,8 @@ def parse_match(main_html: str, econ_html: str, url: str) -> ParsedMatch:
             atk_team, def_team = (team_a, team_b) if a_is_atk else (team_b, team_a)
             atk_load = e.get("loadout_a") if a_is_atk else e.get("loadout_b")
             def_load = e.get("loadout_b") if a_is_atk else e.get("loadout_a")
+            atk_bank = e.get("bank_a") if a_is_atk else e.get("bank_b")
+            def_bank = e.get("bank_b") if a_is_atk else e.get("bank_a")
 
             rounds.append({
                 "round_num": rnum,
@@ -222,8 +241,10 @@ def parse_match(main_html: str, econ_html: str, url: str) -> ParsedMatch:
                 # score BEFORE the round - the only leakage-safe form
                 "atk_score_pre": score_a if a_is_atk else score_b,
                 "def_score_pre": score_b if a_is_atk else score_a,
-                "atk_credits": atk_load,
-                "def_credits": def_load,
+                "atk_loadout": atk_load,
+                "def_loadout": def_load,
+                "atk_bank": atk_bank,
+                "def_bank": def_bank,
                 "atk_buy": buy_type(atk_load),
                 "def_buy": buy_type(def_load),
                 "winner_side": o["winner_side"],

@@ -40,14 +40,16 @@ def insert_match(conn: sqlite3.Connection, m: ParsedMatch) -> int:
             """INSERT INTO rounds (
                    map_id, round_num, atk_team, def_team,
                    atk_score_pre, def_score_pre,
-                   atk_buy, def_buy, atk_credits, def_credits,
+                   atk_buy, def_buy,
+                   atk_loadout, def_loadout, atk_bank, def_bank,
                    winner_side, win_condition
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 (
                     map_id, r["round_num"], r["atk_team"], r["def_team"],
                     r["atk_score_pre"], r["def_score_pre"],
-                    r["atk_buy"], r["def_buy"], r["atk_credits"], r["def_credits"],
+                    r["atk_buy"], r["def_buy"],
+                    r["atk_loadout"], r["def_loadout"], r["atk_bank"], r["def_bank"],
                     r["winner_side"], r["win_condition"],
                 )
                 for r in mp["rounds"]
