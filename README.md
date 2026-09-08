@@ -164,6 +164,14 @@ notebooks/ exploratory analysis
 web/       Next.js app (not yet created)
 ```
 
+## Deploying
+
+The Next.js app lives in `web/`, not the repo root, so a Vercel project needs
+**Root Directory** set to `web`. `web/vercel.json` pins the framework to
+`nextjs` explicitly - without it Vercel can fall back to treating the build as
+a static site and fail looking for a `public/` directory that a Next app never
+produces.
+
 ## Getting started
 
 ```bash
