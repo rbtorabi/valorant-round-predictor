@@ -62,6 +62,24 @@ Parser correctness is checked against invariants rather than by eyeballing:
 attacking and defending sides must swap between rounds 12 and 13, round totals
 must match the economy table's row count, and no round may be missing credits.
 
+## A measured negative result
+
+Enemy credits are never observable, so the plan was to reconstruct them by
+replaying the economy rules over round outcomes. Measured against 21k real
+rounds, that fails: **$5,924 mean absolute error, and 35.1% buy-bracket
+accuracy against a 57.8% majority-class baseline.**
+
+The cause is structural. Survivors carry weapons into the next round for free,
+so credits and loadout value are different quantities and the gap depends on
+who lived. The simulator's error is one-directional in exactly the way that
+predicts - it called 18,270 full-buy rounds semi-buy.
+
+The consequence is a design constraint, not a dead end: a live tool needs
+survivor and kill counts per round, both readable from the round-end screen,
+not just who won. Model training is unaffected, since VLR reports real loadout
+values. The simulator and its validation are kept in the repo because the
+measurement is what tells you which inputs the live version requires.
+
 ## Stack
 
 | Layer | Choice |
