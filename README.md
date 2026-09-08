@@ -48,6 +48,12 @@ Two pages are needed per match, because they carry different halves of a round:
 They join on `(game_id, round_num)`. Loadout value is bucketed into VLR's own
 buy types — eco `<$5k`, semi-eco `$5-10k`, semi-buy `$10-20k`, full-buy `$20k+`.
 
+**Coverage is uneven, and that is upstream.** Lower-tier events (smaller
+regional leagues) often have no economy tab and no round-outcome icons at all —
+not a parsing failure, simply data VLR never recorded. Those rounds are still
+stored, since map and score features remain valid, but the training set requires
+non-null credits. Expect to lose roughly a fifth of raw rounds this way.
+
 Parser correctness is checked against invariants rather than by eyeballing:
 attacking and defending sides must swap between rounds 12 and 13, round totals
 must match the economy table's row count, and no round may be missing credits.
@@ -85,6 +91,7 @@ python -m scraper.db
 
 - [x] Repo, schema, polite cached fetch layer
 - [x] Match list + match page parsers
+- [x] Resumable crawler (`python -m scraper.run --pages N`)
 - [ ] Crawl to ~500 matches / ~40k rounds
 - [ ] EDA and feature engineering
 - [ ] Logistic baseline, then LightGBM
