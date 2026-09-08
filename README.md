@@ -132,12 +132,13 @@ measurement is what tells you which inputs the live version requires.
 | Scraping | Python, httpx, selectolax, tenacity |
 | Storage | SQLite |
 | Modeling | pandas, scikit-learn, LightGBM |
-| Serving | ONNX exported to the browser — no backend to keep alive |
+| Serving | 27 logistic coefficients as JSON — the browser does a dot product |
 | Frontend | Next.js, TypeScript, Tailwind (deployed on Vercel) |
 
 ## Layout
 
 ```
+web/       the calculator, plus the exported model
 scraper/   fetch layer, schema, parsers
 model/     economy simulator, features, training, evaluation
 data/      SQLite db and raw HTML cache (gitignored)
@@ -163,8 +164,10 @@ python -m scraper.db
 - [ ] EDA and feature engineering
 - [ ] Logistic baseline, then LightGBM
 - [ ] Calibration curve + Brier score
-- [ ] Export to ONNX
-- [ ] Next.js app, deploy to Vercel
+- [x] Export model for the browser (2KB of coefficients, no ONNX needed)
+- [x] Working buy-phase calculator (`web/index.html`)
+- [ ] Port to Next.js and deploy to Vercel
+- [ ] Per-round survivor counts, so a live version can estimate enemy economy
 
 ## License
 

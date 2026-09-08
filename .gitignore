@@ -9,8 +9,8 @@ venv/
 data/*.db
 data/*.sqlite
 data/raw/
-models/*.onnx
 models/*.pkl
+# web/model.json is committed on purpose - it IS the deployed model, 2KB of coefficients
 
 # Node / Next.js
 node_modules/

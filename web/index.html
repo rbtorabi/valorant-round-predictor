@@ -1,0 +1,769 @@
+<title>Buy Phase Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ---- dark-first token set ---------------------------------------------- */
+:root {
+  --ground:      #0E1620;
+  --surface:     #16202C;
+  --surface-2:   #1D2937;
+  --line:        #243343;
+  --line-soft:   #1B2735;
+  --text:        #DDE5EC;
+  --text-dim:    #93A6B7;
+  --text-faint:  #64798C;
+  --atk:         #E45C4A;
+  --atk-soft:    #3A1F1E;
+  --def:         #4FB3A6;
+  --def-soft:    #16302E;
+  --signal:      #D9A441;
+  --signal-soft: #322715;
+  --focus:       #6FA8D6;
+  --ink-on-accent: #0E1620;
+
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground:      #EDF1F4;
+    --surface:     #FFFFFF;
+    --surface-2:   #F4F7F9;
+    --line:        #C9D5DE;
+    --line-soft:   #DEE6EC;
+    --text:        #16222E;
+    --text-dim:    #4E6274;
+    --text-faint:  #778B9C;
+    --atk:         #C4402F;
+    --atk-soft:    #FAE7E3;
+    --def:         #1F7F74;
+    --def-soft:    #E0F1EE;
+    --signal:      #9A6C10;
+    --signal-soft: #F8EEDA;
+    --focus:       #2C6FA8;
+    --ink-on-accent: #FFFFFF;
+  }
+}
+
+:root[data-theme="light"] {
+  --ground:      #EDF1F4;
+  --surface:     #FFFFFF;
+  --surface-2:   #F4F7F9;
+  --line:        #C9D5DE;
+  --line-soft:   #DEE6EC;
+  --text:        #16222E;
+  --text-dim:    #4E6274;
+  --text-faint:  #778B9C;
+  --atk:         #C4402F;
+  --atk-soft:    #FAE7E3;
+  --def:         #1F7F74;
+  --def-soft:    #E0F1EE;
+  --signal:      #9A6C10;
+  --signal-soft: #F8EEDA;
+  --focus:       #2C6FA8;
+  --ink-on-accent: #FFFFFF;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 22px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ---- header ------------------------------------------------------------ */
+.masthead { display: flex; flex-direction: column; gap: 10px; }
+
+.eyebrow {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(38px, 7vw, 62px);
+  line-height: 0.95;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.standfirst {
+  color: var(--text-dim);
+  max-width: 62ch;
+  margin: 0;
+}
+
+.notice {
+  border-left: 3px solid var(--signal);
+  background: var(--signal-soft);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.notice strong {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  color: var(--signal);
+}
+
+/* ---- mode switch ------------------------------------------------------- */
+.modes { display: flex; border: 1px solid var(--line); background: var(--surface); }
+.modes button {
+  flex: 1;
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 13px 10px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.modes button:last-child { border-right: 0; }
+.modes button:hover { color: var(--text); background: var(--surface-2); }
+.modes button[aria-selected="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 0 -3px 0 var(--focus);
+}
+
+/* ---- panel grid -------------------------------------------------------- */
+.panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+@media (max-width: 800px) { .panels { grid-template-columns: 1fr; } }
+
+.panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-head {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-body { padding: 18px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ---- controls ---------------------------------------------------------- */
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.field-label {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.field-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+.buy-tag {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  margin-left: 8px;
+}
+
+select, .seg button, .step button {
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  cursor: pointer;
+}
+select { width: 100%; }
+
+input[type="range"] {
+  width: 100%;
+  appearance: none;
+  height: 4px;
+  background: var(--line);
+  cursor: pointer;
+  margin: 8px 0 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px; height: 18px;
+  background: var(--text);
+  border: 3px solid var(--surface);
+  cursor: grab;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: var(--text);
+  border: 3px solid var(--surface);
+  border-radius: 0;
+  cursor: grab;
+}
+input[type="range"].atk::-webkit-slider-thumb { background: var(--atk); }
+input[type="range"].atk::-moz-range-thumb { background: var(--atk); }
+input[type="range"].def::-webkit-slider-thumb { background: var(--def); }
+input[type="range"].def::-moz-range-thumb { background: var(--def); }
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.seg { display: flex; }
+.seg button { flex: 1; border-right: 0; }
+.seg button:last-child { border-right: 1px solid var(--line); }
+.seg button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+}
+
+.step { display: flex; align-items: stretch; gap: 0; }
+.step button { width: 42px; font-size: 17px; line-height: 1; border-right: 0; }
+.step button:last-of-type { border-right: 1px solid var(--line); border-left: 0; }
+.step .readout {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-left: 0; border-right: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  background: var(--surface);
+}
+
+.muted { color: var(--text-faint); font-size: 12.5px; line-height: 1.5; }
+
+/* ---- readout ----------------------------------------------------------- */
+.big-figure { display: flex; align-items: baseline; gap: 12px; }
+.big-figure .pct {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(58px, 12vw, 88px);
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+  color: var(--atk);
+}
+.big-figure .who {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 15px;
+  color: var(--text-dim);
+  max-width: 12ch;
+  line-height: 1.15;
+}
+
+.oddsbar { display: flex; height: 30px; border: 1px solid var(--line); overflow: hidden; }
+.oddsbar span {
+  display: flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 8px;
+  white-space: nowrap;
+  transition: flex-basis 220ms ease;
+}
+.oddsbar .a { background: var(--atk); }
+.oddsbar .d { background: var(--def); }
+.oddsbar .a, .oddsbar .d { color: var(--ink-on-accent); justify-content: flex-start; }
+.oddsbar .d { justify-content: flex-end; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opt {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.opt.win { border-color: var(--signal); background: var(--signal-soft); }
+.opt h3 {
+  margin: 0;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.opt .n {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 26px;
+  font-weight: 600;
+}
+.verdict {
+  border: 1px solid var(--signal);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.verdict .call {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--signal);
+}
+
+/* ---- evidence ---------------------------------------------------------- */
+.evidence { border: 1px solid var(--line); background: var(--surface); }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 460px; }
+th, td { padding: 10px 18px; text-align: left; border-bottom: 1px solid var(--line-soft); }
+th {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+td { font-size: 14px; }
+td.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+tbody tr:last-child td { border-bottom: 0; }
+.rate-cell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.rate-cell i { display: block; height: 7px; background: var(--atk); }
+
+footer { color: var(--text-faint); font-size: 13px; max-width: 70ch; }
+footer code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border: 1px solid var(--line-soft);
+}
+a { color: var(--focus); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Valorant Round Predictor &middot; Prototype</div>
+    <h1>Buy Phase Calculator</h1>
+    <p class="standfirst">
+      You have thirty seconds and a number in the corner of the screen. This answers
+      the only question that matters in it: does spending now win more rounds than
+      spending later?
+    </p>
+  </header>
+
+  <div class="notice">
+    <strong>Trained model &middot; 17,308 rounds</strong>
+    <span>
+      Logistic regression over 332 professional matches, held out by match rather than by round.
+      Brier 0.2165 against a 0.2499 base rate, and calibrated &mdash; when it says 46&#37;, the real
+      figure is 46&#37;. Enemy credits are the one thing you must estimate yourself; nothing in the
+      game shows them.
+    </span>
+  </div>
+
+  <div class="modes" role="tablist" aria-label="Readout mode">
+    <button role="tab" id="tab-prob" aria-selected="true" aria-controls="readout">Win probability</button>
+    <button role="tab" id="tab-call" aria-selected="false" aria-controls="readout">Buy or save</button>
+  </div>
+
+  <div class="panels">
+
+    <!-- ---------------- controls ---------------- -->
+    <section class="panel" aria-label="Round state">
+      <div class="panel-head"><span>Round state</span><span id="round-label">Round 1</span></div>
+      <div class="panel-body">
+
+        <div class="field">
+          <label class="field-label" for="map">Map
+            <span class="field-value muted" style="color:var(--text-faint)">not modelled yet</span>
+          </label>
+          <select id="map">
+            <option>Ascent</option><option>Haven</option><option>Split</option>
+            <option>Lotus</option><option>Sunset</option><option>Abyss</option><option>Summit</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Your side</span>
+          <div class="seg" id="side">
+            <button type="button" data-side="atk" aria-pressed="true">Attacking</button>
+            <button type="button" data-side="def" aria-pressed="false">Defending</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Score <span class="field-value" id="score-txt">0 &ndash; 0</span></span>
+          <div class="split">
+            <div class="step" data-target="you">
+              <button type="button" data-d="-1" aria-label="Your score down">&minus;</button>
+              <div class="readout" id="score-you">0</div>
+              <button type="button" data-d="1" aria-label="Your score up">+</button>
+            </div>
+            <div class="step" data-target="them">
+              <button type="button" data-d="-1" aria-label="Their score down">&minus;</button>
+              <div class="readout" id="score-them">0</div>
+              <button type="button" data-d="1" aria-label="Their score up">+</button>
+            </div>
+          </div>
+          <div class="muted">Left: your rounds. Right: theirs.</div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="you-cr">Your credits
+            <span class="field-value" id="you-cr-val">800<span class="buy-tag" id="you-tag">eco</span></span>
+          </label>
+          <input type="range" id="you-cr" class="atk" min="800" max="9000" step="100" value="800">
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="them-cr">Enemy credits <span class="field-value muted" id="them-cr-val" style="color:var(--text-dim)">800</span></label>
+          <input type="range" id="them-cr" class="def" min="800" max="9000" step="100" value="800">
+          <div class="muted">
+            You cannot see this in game. In the finished tool it is reconstructed from round
+            outcomes and plants using the credit rules &mdash; the same arithmetic good players
+            already do in their heads.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ---------------- readout ---------------- -->
+    <section class="panel" aria-label="Prediction" id="readout">
+      <div class="panel-head"><span id="readout-title">Round win probability</span><span id="readout-sub">this round</span></div>
+      <div class="panel-body">
+
+        <div id="view-prob">
+          <div class="big-figure">
+            <div class="pct" id="pct">56%</div>
+            <div class="who" id="who">chance you win this round</div>
+          </div>
+          <div class="oddsbar" style="margin-top:16px" aria-hidden="true">
+            <span class="a" id="bar-a" style="flex:0 0 56%">YOU</span>
+            <span class="d" id="bar-d" style="flex:0 0 44%">THEM</span>
+          </div>
+          <p class="muted" id="prob-note" style="margin-top:14px">
+            Both sides on comparable money. The gap, not the absolute figure, is what moves this.
+          </p>
+        </div>
+
+        <div id="view-call" hidden>
+          <div class="split">
+            <div class="opt" id="opt-buy">
+              <h3>Buy now</h3>
+              <div class="n" id="buy-n">1.02</div>
+              <div class="muted">rounds expected over the next two</div>
+            </div>
+            <div class="opt" id="opt-save">
+              <h3>Save</h3>
+              <div class="n" id="save-n">0.94</div>
+              <div class="muted">rounds expected over the next two</div>
+            </div>
+          </div>
+          <div class="verdict" style="margin-top:14px">
+            <div class="call" id="call">Buy</div>
+            <div class="muted" id="call-why">
+              Buying wins about 0.08 more rounds across this round and the next.
+            </div>
+          </div>
+          <p class="muted" style="margin-top:12px">
+            Saving concedes this round more often, but banks a loss bonus and a full loadout for the
+            next one. The comparison is over two rounds because that is the horizon the decision
+            actually spans.
+          </p>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------------- evidence ---------------- -->
+  <section class="evidence" aria-label="Observed data">
+    <div class="panel-head"><span>Attacker win rate, defenders on a full buy</span><span>n = 9,779</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Attacker loadout</th><th>Bracket</th><th class="num">Rounds</th><th class="num">Attacker win rate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Eco</td><td class="muted">under $5k</td><td class="num">37</td>
+              <td class="num"><span class="rate-cell"><i style="width:5px"></i>5.4%</span></td></tr>
+          <tr><td>Semi-eco</td><td class="muted">$5k &ndash; $10k</td><td class="num">814</td>
+              <td class="num"><span class="rate-cell"><i style="width:19px"></i>19.0%</span></td></tr>
+          <tr><td>Semi-buy</td><td class="muted">$10k &ndash; $20k</td><td class="num">2,541</td>
+              <td class="num"><span class="rate-cell"><i style="width:39px"></i>39.3%</span></td></tr>
+          <tr><td>Full buy</td><td class="muted">$20k and up</td><td class="num">6,387</td>
+              <td class="num"><span class="rate-cell"><i style="width:48px"></i>48.4%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Holding the defender economy fixed matters. An earlier cut of this table pooled rounds where
+      the defenders were also broke, and appeared to show semi-buy performing as well as a full buy.
+      It does not: controlling for what the other side had, every bracket is a real step up.
+    </p>
+    <p>
+      Gradient boosting was tried and lost to plain logistic regression on Brier score, so the
+      simpler model shipped &mdash; which is why this page runs the real thing rather than a demo.
+      The model is 27 coefficients, about 2&nbsp;KB; your browser computes a dot product and a
+      sigmoid. Enemy credits stay a manual estimate: survivors carry weapons over for free, so a
+      team&rsquo;s loadout can outrun its bank, and reconstructing it from round outcomes alone
+      measurably does not work.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // The trained model, exported straight from scikit-learn. Logistic
+  // regression won on Brier score, so the whole thing is a coefficient
+  // vector: the browser needs a dot product and a sigmoid, nothing more.
+  var MODEL = {"features":["round_num","atk_loadout","def_loadout","loadout_diff","loadout_ratio","atk_score_pre","def_score_pre","score_diff","is_pistol","map_name_Abyss","map_name_Ascent","map_name_Breeze","map_name_Fracture","map_name_Haven","map_name_Lotus","map_name_Pearl","map_name_Split","map_name_Summit","map_name_Sunset","atk_buy_eco","atk_buy_full-buy","atk_buy_semi-buy","atk_buy_semi-eco","def_buy_eco","def_buy_full-buy","def_buy_semi-buy","def_buy_semi-eco"],"mean":[11.31950543101456,18025.138664201524,17666.714813958864,358.42385024266235,1.5298564136788158,5.174832447423157,5.1193089900623985,0.05552345736075803,0.0955627455511902,0.024670672521377397,0.13149988444649874,0.10659810492257915,0.00733764733071412,0.1651259533163855,0.15686387797550266,0.009475387104229259,0.15160619366766814,0.10411370464525076,0.14270857406979431,0.13883753177721284,0.5907094984978045,0.21851167090362839,0.05194129882135429,0.15004622140050844,0.5649988444649873,0.21735613589091748,0.06759879824358678],"scale":[6.647932335043744,7226.212748835054,7663.246650476627,8173.906388951404,2.469830641467382,3.7897950639384543,3.790417556066454,3.6420594217251843,0.2939906583786442,0.15511940703445315,0.33794624548447966,0.30860160231193545,0.08534521815757569,0.3712941864044472,0.3636723824570533,0.09687932774051575,0.3586387537749785,0.3054079913006407,0.34977540930825934,0.34577691008397926,0.4917029457734383,0.4132363979401292,0.22190854039019106,0.3571167215966483,0.49575714842876084,0.41244690092360553,0.2510561704471922],"coef":[-0.279033450364643,0.25768874511413464,-0.07313286066382359,0.2963758978169147,-0.008229015878716934,0.20916597005757612,0.13528251831862187,0.07685732054083566,-0.09303016244389817,0.02246817024364145,-0.05641833000958031,0.015256782533986307,-0.009597223629218362,0.026063513326504785,0.03184302145506971,-0.007896937473783075,0.006800884702100498,-0.017914583480393997,-0.016491980275592205,-0.26017079262618603,0.08292660041831562,0.1327774403214982,-0.02560817216162674,0.4632540493228072,-0.2495494982488899,-0.13595640466202238,0.05717835184518303],"intercept":0.04085954288917751,"trained_on":{"rounds":17308,"matches":332,"base_rate":0.5054887913103767},"maps":["Abyss","Ascent","Breeze","Fracture","Haven","Lotus","Pearl","Split","Summit","Sunset"]};
+
+  var TEAM = 5;
+  var state = { map: "Ascent", side: "atk", you: 800, them: 800, sYou: 0, sThem: 0 };
+
+  function bracket(loadout) {
+    if (loadout < 5000) return "eco";
+    if (loadout < 10000) return "semi-eco";
+    if (loadout < 20000) return "semi-buy";
+    return "full-buy";
+  }
+
+  // Credits are per player in the UI because that is what a player sees;
+  // the model works in team loadout value, which is roughly five times it.
+  // Roughly, because survivors carry weapons over for free - the same
+  // carry-over that defeated the economy simulator.
+  function toLoadout(credits) { return credits * TEAM; }
+
+  function predictAtk(o) {
+    var f = Object.create(null);
+    var round = o.atkScore + o.defScore + 1;
+    f.round_num = round;
+    f.atk_loadout = o.atkLoadout;
+    f.def_loadout = o.defLoadout;
+    f.loadout_diff = o.atkLoadout - o.defLoadout;
+    f.loadout_ratio = o.atkLoadout / Math.max(1, o.defLoadout);
+    f.atk_score_pre = o.atkScore;
+    f.def_score_pre = o.defScore;
+    f.score_diff = o.atkScore - o.defScore;
+    f.is_pistol = (round === 1 || round === 13) ? 1 : 0;
+    f["map_name_" + o.map] = 1;
+    f["atk_buy_" + bracket(o.atkLoadout)] = 1;
+    f["def_buy_" + bracket(o.defLoadout)] = 1;
+
+    var z = MODEL.intercept;
+    for (var i = 0; i < MODEL.features.length; i++) {
+      var v = f[MODEL.features[i]] || 0;
+      z += ((v - MODEL.mean[i]) / MODEL.scale[i]) * MODEL.coef[i];
+    }
+    return 1 / (1 + Math.exp(-z));
+  }
+
+  // Probability that YOU win, whichever side you are on.
+  function yourOdds(youCredits, themCredits, sYou, sThem) {
+    var atkIsYou = state.side === "atk";
+    var p = predictAtk({
+      map: state.map,
+      atkLoadout: toLoadout(atkIsYou ? youCredits : themCredits),
+      defLoadout: toLoadout(atkIsYou ? themCredits : youCredits),
+      atkScore: atkIsYou ? sYou : sThem,
+      defScore: atkIsYou ? sThem : sYou
+    });
+    return atkIsYou ? p : 1 - p;
+  }
+
+  var LOSS_BONUS = [1900, 2400, 2900];
+  function money(n) { return n.toLocaleString("en-US").replace(/,/g, " "); }
+  function el(id) { return document.getElementById(id); }
+
+  function render() {
+    var you = state.you, them = state.them;
+
+    el("you-cr-val").innerHTML = money(you) +
+      '<span class="buy-tag">' + bracket(toLoadout(you)) + "</span>";
+    el("them-cr-val").textContent = money(them);
+    el("score-you").textContent = state.sYou;
+    el("score-them").textContent = state.sThem;
+    el("score-txt").innerHTML = state.sYou + " &ndash; " + state.sThem;
+    el("round-label").textContent = "Round " + (state.sYou + state.sThem + 1);
+
+    var p = yourOdds(you, them, state.sYou, state.sThem);
+    var pct = Math.round(p * 100);
+    el("pct").textContent = pct + "%";
+    el("pct").style.color = state.side === "atk" ? "var(--atk)" : "var(--def)";
+    el("bar-a").style.flexBasis = pct + "%";
+    el("bar-d").style.flexBasis = (100 - pct) + "%";
+    el("bar-a").style.background = state.side === "atk" ? "var(--atk)" : "var(--def)";
+    el("bar-d").style.background = state.side === "atk" ? "var(--def)" : "var(--atk)";
+
+    var gap = you - them;
+    var round = state.sYou + state.sThem + 1;
+    var impossible = (round === 1 || round === 13) && (you > 1500 || them > 1500);
+    el("prob-note").style.color = impossible ? "var(--signal)" : "";
+    el("prob-note").textContent = impossible
+      ? "Pistol rounds always start at $800, so this combination never occurs in the training " +
+        "data and the figure above is an extrapolation. Treat it as unreliable."
+      : Math.abs(gap) < 400
+      ? "Both sides on comparable money. The gap, not the absolute figure, is what moves this."
+      : (gap > 0
+          ? "You are up " + money(Math.abs(gap)) + " credits a player, and the model is pricing that in."
+          : "You are down " + money(Math.abs(gap)) + " credits a player, and it shows.");
+
+    // --- buy or save, compared across this round and the next
+    var streak = Math.min(2, Math.max(0, state.sThem - state.sYou));
+    var bonus = LOSS_BONUS[streak];
+
+    var buyNow = yourOdds(you, them, state.sYou, state.sThem);
+    var afterWin = Math.min(9000, 3000);
+    var afterLoss = Math.min(9000, bonus);
+    var buyNext = buyNow * yourOdds(afterWin, them, state.sYou + 1, state.sThem)
+                + (1 - buyNow) * yourOdds(afterLoss, them, state.sYou, state.sThem + 1);
+    var buyTotal = buyNow + buyNext;
+
+    var saveNow = yourOdds(800, them, state.sYou, state.sThem);
+    var saved = Math.min(9000, you + bonus);
+    var saveNext = saveNow * yourOdds(Math.min(9000, saved + 3000), them, state.sYou + 1, state.sThem)
+                 + (1 - saveNow) * yourOdds(saved, them, state.sYou, state.sThem + 1);
+    var saveTotal = saveNow + saveNext;
+
+    el("buy-n").textContent = buyTotal.toFixed(2);
+    el("save-n").textContent = saveTotal.toFixed(2);
+
+    var buyWins = buyTotal >= saveTotal;
+    el("opt-buy").classList.toggle("win", buyWins);
+    el("opt-save").classList.toggle("win", !buyWins);
+    el("call").textContent = buyWins ? "Buy" : "Save";
+    el("call-why").textContent = (buyWins ? "Buying" : "Saving") + " is worth about " +
+      Math.abs(buyTotal - saveTotal).toFixed(2) + " more rounds across this round and the next.";
+  }
+
+  function setMode(mode) {
+    var prob = mode === "prob";
+    el("tab-prob").setAttribute("aria-selected", String(prob));
+    el("tab-call").setAttribute("aria-selected", String(!prob));
+    el("view-prob").hidden = !prob;
+    el("view-call").hidden = prob;
+    el("readout-title").textContent = prob ? "Round win probability" : "Buy or save";
+    el("readout-sub").textContent = prob ? "this round" : "next two rounds";
+    render();
+  }
+
+  el("tab-prob").addEventListener("click", function () { setMode("prob"); });
+  el("tab-call").addEventListener("click", function () { setMode("call"); });
+  el("map").addEventListener("change", function (e) { state.map = e.target.value; render(); });
+  el("you-cr").addEventListener("input", function (e) { state.you = +e.target.value; render(); });
+  el("them-cr").addEventListener("input", function (e) { state.them = +e.target.value; render(); });
+
+  el("side").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    state.side = b.dataset.side;
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function (x) {
+      x.setAttribute("aria-pressed", String(x === b));
+    });
+    render();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".step"), function (step) {
+    step.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b) return;
+      var key = step.dataset.target === "you" ? "sYou" : "sThem";
+      state[key] = Math.min(24, Math.max(0, state[key] + (+b.dataset.d)));
+      render();
+    });
+  });
+
+  // populate maps from whatever the model was actually trained on
+  var sel = el("map");
+  sel.innerHTML = "";
+  MODEL.maps.forEach(function (m) {
+    var o = document.createElement("option");
+    o.textContent = m; o.value = m;
+    sel.appendChild(o);
+  });
+  sel.value = MODEL.maps.indexOf("Ascent") >= 0 ? "Ascent" : MODEL.maps[0];
+  state.map = sel.value;
+
+  render();
+})();
+</script>
