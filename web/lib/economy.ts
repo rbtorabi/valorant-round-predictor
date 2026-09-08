@@ -60,11 +60,57 @@ export function currentRound(state: MatchState): number {
   return state.history.length + 1;
 }
 
-/** Sides swap at halftime, and again for each overtime pair. */
+export const ROUNDS_TO_WIN = 13;
+
+/**
+ * Sides swap at halftime, and then every single round in overtime, so that
+ * each team plays one attack and one defence per overtime pair.
+ */
 export function youAreAttacking(state: MatchState): boolean {
   const round = currentRound(state);
-  const secondHalf = round >= HALFTIME_ROUND && round <= REGULATION_ROUNDS;
+  if (round > REGULATION_ROUNDS) {
+    const overtimeIndex = round - REGULATION_ROUNDS - 1;
+    return overtimeIndex % 2 === 0 ? state.startedAttacking : !state.startedAttacking;
+  }
+  const secondHalf = round >= HALFTIME_ROUND;
   return secondHalf ? !state.startedAttacking : state.startedAttacking;
+}
+
+export interface MatchResult {
+  winner: "you" | "them";
+  you: number;
+  them: number;
+  wentToOvertime: boolean;
+}
+
+/**
+ * Whether the match is over, and who took it.
+ *
+ * Regulation is first to 13. At 12-12 it goes to overtime, which is played in
+ * pairs of rounds - a team wins by taking both, which is the same as leading
+ * by two once a pair has finished. A lead of two mid-pair does not end it,
+ * because the other team has not had its round on the opposite side yet.
+ */
+export function matchResult(state: MatchState): MatchResult | null {
+  const { you, them } = score(state);
+  const played = state.history.length;
+
+  if (played <= REGULATION_ROUNDS) {
+    // Reaching 13 inside regulation always wins it: 12-12 sends the match to
+    // overtime at 24 rounds, so a 13-12 regulation score cannot occur.
+    if (you >= ROUNDS_TO_WIN) return { winner: "you", you, them, wentToOvertime: false };
+    if (them >= ROUNDS_TO_WIN) return { winner: "them", you, them, wentToOvertime: false };
+    return null;
+  }
+
+  // overtime: only judge at the end of a completed pair
+  const overtimeRounds = played - REGULATION_ROUNDS;
+  if (overtimeRounds % 2 !== 0) return null;
+
+  const lead = you - them;
+  if (lead >= 2) return { winner: "you", you, them, wentToOvertime: true };
+  if (lead <= -2) return { winner: "them", you, them, wentToOvertime: true };
+  return null;
 }
 
 export function score(state: MatchState): { you: number; them: number } {

@@ -7,6 +7,7 @@ import {
   currentRound,
   estimateConfidence,
   estimateEconomy,
+  matchResult,
   newMatch,
   score,
   youAreAttacking,
@@ -28,6 +29,9 @@ export default function MatchTracker() {
     MODEL.maps.includes("Ascent") ? "Ascent" : MODEL.maps[0]
   );
   const [setupAttacking, setSetupAttacking] = useState(true);
+
+  const undo = () =>
+    setMatch((prev) => (prev ? { ...prev, history: prev.history.slice(0, -1) } : prev));
 
   if (!match) {
     return (
@@ -86,6 +90,52 @@ export default function MatchTracker() {
     );
   }
 
+  const result = matchResult(match);
+  if (result) {
+    const won = result.winner === "you";
+    return (
+      <section className="panel">
+        <div className="panel-head">
+          <span>{match.map} &middot; final</span>
+          <span>{result.wentToOvertime ? "overtime" : "regulation"}</span>
+        </div>
+        <div className="panel-body">
+          <div className="verdict" style={{ borderColor: won ? "var(--def)" : "var(--atk)" }}>
+            <div className="call" style={{ color: won ? "var(--def)" : "var(--atk)" }}>
+              {won ? "Won" : "Lost"}
+            </div>
+            <div className="pct">
+              {result.you} &ndash; {result.them}
+              {result.wentToOvertime ? " in overtime" : ""}
+            </div>
+          </div>
+
+          <div className="timeline" aria-label="round history">
+            {match.history.map((r, i) => (
+              <i
+                key={i}
+                className={r.outcome.startsWith("won") ? "w" : "l"}
+                title={`Round ${r.round}: ${r.outcome}`}
+              />
+            ))}
+          </div>
+
+          <div className="seg">
+            <button type="button" className="control" onClick={undo}>
+              Undo last round
+            </button>
+            <button type="button" className="control" onClick={() => setMatch(null)}>
+              New match
+            </button>
+          </div>
+          <div className="muted">
+            Undo if you tapped the wrong result and the match ended early.
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const round = currentRound(match);
   const attacking = youAreAttacking(match);
   const sc = score(match);
@@ -119,9 +169,6 @@ export default function MatchTracker() {
         yourCreditsOverride: null,
       };
     });
-
-  const undo = () =>
-    setMatch((prev) => (prev ? { ...prev, history: prev.history.slice(0, -1) } : prev));
 
   const nudgeEnemy = (delta: number) =>
     setMatch((prev) => {
