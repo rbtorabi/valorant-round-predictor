@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 
 from model.features import load, matrix
 
-OUT = Path(__file__).resolve().parents[1] / "web" / "model.json"
+OUT = Path(__file__).resolve().parents[1] / "web" / "lib" / "model.json"
 
 
 def main() -> None:

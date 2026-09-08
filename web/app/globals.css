@@ -1,0 +1,458 @@
+/* Dark-first: this runs next to a game, on a second monitor, at night. */
+:root {
+  --ground: #0e1620;
+  --surface: #16202c;
+  --surface-2: #1d2937;
+  --line: #243343;
+  --line-soft: #1b2735;
+  --text: #dde5ec;
+  --text-dim: #93a6b7;
+  --text-faint: #64798c;
+  --atk: #e45c4a;
+  --def: #4fb3a6;
+  --signal: #d9a441;
+  --signal-soft: #322715;
+  --focus: #6fa8d6;
+  --ink-on-accent: #0e1620;
+
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #edf1f4;
+    --surface: #ffffff;
+    --surface-2: #f4f7f9;
+    --line: #c9d5de;
+    --line-soft: #dee6ec;
+    --text: #16222e;
+    --text-dim: #4e6274;
+    --text-faint: #778b9c;
+    --atk: #c4402f;
+    --def: #1f7f74;
+    --signal: #9a6c10;
+    --signal-soft: #f8eeda;
+    --focus: #2c6fa8;
+    --ink-on-accent: #ffffff;
+  }
+}
+
+:root[data-theme="light"] {
+  --ground: #edf1f4;
+  --surface: #ffffff;
+  --surface-2: #f4f7f9;
+  --line: #c9d5de;
+  --line-soft: #dee6ec;
+  --text: #16222e;
+  --text-dim: #4e6274;
+  --text-faint: #778b9c;
+  --atk: #c4402f;
+  --def: #1f7f74;
+  --signal: #9a6c10;
+  --signal-soft: #f8eeda;
+  --focus: #2c6fa8;
+  --ink-on-accent: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 20px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.eyebrow {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(34px, 6vw, 54px);
+  line-height: 0.95;
+  text-transform: uppercase;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.label {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.panel-head {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modes {
+  display: flex;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.modes button {
+  flex: 1;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 10px;
+  cursor: pointer;
+}
+
+.modes button:last-child {
+  border-right: 0;
+}
+
+.modes button[aria-selected="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 0 -3px 0 var(--focus);
+}
+
+button.control,
+select {
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+select {
+  width: 100%;
+}
+
+input[type="range"] {
+  width: 100%;
+  appearance: none;
+  height: 4px;
+  background: var(--line);
+  cursor: pointer;
+  margin: 8px 0 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--surface);
+  background: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.seg {
+  display: flex;
+}
+
+.seg button {
+  flex: 1;
+  border-right: 0;
+}
+
+.seg button:last-child {
+  border-right: 1px solid var(--line);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+}
+
+.tag {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  margin-left: 8px;
+}
+
+.notice {
+  border-left: 3px solid var(--signal);
+  background: var(--signal-soft);
+  padding: 11px 15px;
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notice b {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  color: var(--signal);
+}
+
+.muted {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 800px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oddsbar {
+  display: flex;
+  height: 28px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.oddsbar span {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-on-accent);
+  white-space: nowrap;
+}
+
+/* ---- second-monitor mode: read in one second, from a metre away -------- */
+.glance {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.verdict {
+  border: 2px solid var(--signal);
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.verdict .call {
+  font-family: var(--display);
+  text-transform: uppercase;
+  font-size: clamp(56px, 13vw, 104px);
+  line-height: 0.85;
+  font-weight: 700;
+  color: var(--signal);
+}
+
+.verdict .pct {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+.econ {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.econ .box {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.econ .box .v {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.outcomes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.outcomes button {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 17px;
+  font-weight: 600;
+  padding: 16px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.outcomes button:hover {
+  border-color: var(--focus);
+}
+
+.outcomes button.win {
+  border-color: var(--def);
+  color: var(--def);
+}
+
+.outcomes button.loss {
+  border-color: var(--atk);
+  color: var(--atk);
+}
+
+.timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.timeline i {
+  width: 14px;
+  height: 14px;
+  display: block;
+  border: 1px solid var(--line);
+}
+
+.timeline i.w {
+  background: var(--def);
+}
+
+.timeline i.l {
+  background: var(--atk);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+th {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+td {
+  font-size: 14px;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+footer {
+  color: var(--text-faint);
+  font-size: 13px;
+  max-width: 70ch;
+}
+
+a {
+  color: var(--focus);
+}

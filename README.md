@@ -81,6 +81,23 @@ fixed, appeared to show semi-buy performing as well as a full buy. That was a
 confound: it pooled rounds where the defenders were also broke. Controlling for
 it, the relationship is monotonic with real gaps throughout.
 
+## Using it during a match
+
+**Match mode** is built for a second monitor. Pick the map and your starting
+side once, then after each round tap what happened - won, lost, or either of
+those with a plant. Both economies are carried forward from the credit rules,
+so you never type a number again, and the buy-or-save call is a single word
+readable at a glance.
+
+Enemy credits are labelled with how much they can be trusted. They are exact
+at round 1, at halftime and in overtime, drift in between, and can be corrected
+by hand when you have seen what the other side is holding. That honesty is a
+direct consequence of the measurement above: the estimate is known to be
+imperfect, so the interface says so rather than printing a confident number.
+
+Pistol rounds show no advice at all. Both sides have $800 and everyone buys,
+so there is no decision to make and pretending otherwise would be noise.
+
 ## Where the data comes from
 
 Two pages are needed per match, because they carry different halves of a round:
@@ -138,7 +155,8 @@ measurement is what tells you which inputs the live version requires.
 ## Layout
 
 ```
-web/       the calculator, plus the exported model
+web/       Next.js app - match mode, calculator, exported model
+docs/      the original single-file prototype
 scraper/   fetch layer, schema, parsers
 model/     economy simulator, features, training, evaluation
 data/      SQLite db and raw HTML cache (gitignored)
@@ -165,8 +183,8 @@ python -m scraper.db
 - [ ] Logistic baseline, then LightGBM
 - [ ] Calibration curve + Brier score
 - [x] Export model for the browser (2KB of coefficients, no ONNX needed)
-- [x] Working buy-phase calculator (`web/index.html`)
-- [ ] Port to Next.js and deploy to Vercel
+- [x] Next.js app with match mode and calculator mode
+- [ ] Deploy to Vercel
 - [ ] Per-round survivor counts, so a live version can estimate enemy economy
 
 ## License
