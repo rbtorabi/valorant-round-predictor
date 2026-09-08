@@ -5,8 +5,8 @@ score, both teams' economy, and side — trained on professional match data
 scraped from VLR.gg. Ships as an interactive web app where you set the board
 state and watch the odds move.
 
-> **Status:** in progress. Scraping and parsing work end to end; the crawl,
-> model, and web app are next. See [Roadmap](#roadmap).
+> **Status:** model trained and calibrated on 17,308 rounds. Web app next.
+> See [Results](#results) and [Roadmap](#roadmap).
 
 ## Why pre-round, and not a live win-probability curve
 
@@ -35,6 +35,51 @@ headline metric is Brier score plus a reliability curve, not accuracy.
 **Scraping is cached and resumable.** Pages are written to `data/raw/` on first
 fetch, and already-scraped match IDs are skipped, so re-parsing costs nothing
 and an interrupted crawl picks up where it stopped.
+
+## Results
+
+Trained on 17,308 rounds from 332 professional matches, held out **by match**
+rather than by round - rounds inside one match share teams, form and economy,
+so a random round split leaks across the boundary and flatters the score.
+
+| model | Brier | log loss | AUC | accuracy |
+| --- | --- | --- | --- | --- |
+| baseline (always the base rate) | 0.2499 | 0.6930 | 0.500 | 0.511 |
+| **logistic regression** | **0.2165** | **0.6204** | **0.701** | **0.636** |
+| gradient boosting | 0.2175 | 0.6223 | 0.693 | 0.626 |
+
+Logistic regression edges out gradient boosting, so the relationship is close
+to linear in log-odds and the extra machinery earns nothing. The simpler model
+ships - which also makes in-browser inference almost free.
+
+Calibration on held-out matches, which matters more here than accuracy:
+
+| predicted | actual | n |
+| --- | --- | --- |
+| 15% | 17% | 258 |
+| 36% | 37% | 387 |
+| 46% | 46% | 1,361 |
+| 54% | 57% | 1,031 |
+| 77% | 81% | 176 |
+| 92% | 91% | 180 |
+
+Every bucket lands within a few points of its stated probability.
+
+### What the data says about buying
+
+Attacker win rate by attacker bracket, holding defenders at a full buy:
+
+| attacker bracket | n | win rate |
+| --- | --- | --- |
+| eco | 37 | 5.4% |
+| semi-eco | 814 | 19.0% |
+| semi-buy | 2,541 | 39.3% |
+| full-buy | 6,387 | 48.4% |
+
+An earlier version of this table, computed without holding the defender economy
+fixed, appeared to show semi-buy performing as well as a full buy. That was a
+confound: it pooled rounds where the defenders were also broke. Controlling for
+it, the relationship is monotonic with real gaps throughout.
 
 ## Where the data comes from
 
