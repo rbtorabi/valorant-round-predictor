@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MODEL } from "@/lib/model";
+import { MODEL, isOutOfDistribution } from "@/lib/model";
 import { adviseBuyOrSave } from "@/lib/advice";
 import {
   currentRound,
@@ -77,8 +77,9 @@ export default function MatchTracker() {
             START MATCH
           </button>
           <div className="muted">
-            After each round, tap what happened. Your economy and theirs are carried forward
-            from the credit rules, so you never type a number again.
+            After each round, tap what happened. Both economies carry forward from the credit
+            rules. Yours you can correct at a glance, since your credits are on your screen;
+            theirs are never shown anywhere, so they stay an estimate.
           </div>
         </div>
       </section>
@@ -90,6 +91,7 @@ export default function MatchTracker() {
   const sc = score(match);
   const eco = estimateEconomy(match);
   const confidence = estimateConfidence(match);
+  const ood = isOutOfDistribution(round, eco.you, eco.them);
 
   const advice = adviseBuyOrSave({
     map: match.map,
@@ -132,12 +134,16 @@ export default function MatchTracker() {
 
         <div className="panel-body">
           <div className="verdict">
-            <div className="call">{advice.isPistolRound ? "Pistol" : advice.call}</div>
+            <div className="call">
+              {ood ? "—" : advice.isPistolRound ? "Pistol" : advice.call}
+            </div>
             <div className="pct">
-              {advice.isPistolRound ? (
+              {ood ? (
+                <>no reliable read on this state</>
+              ) : advice.isPistolRound ? (
                 <>
-                  {Math.round(advice.probability * 100)}% to win &middot; both sides have $800,
-                  so there is nothing to decide
+                  {Math.round(advice.probability * 100)}% to win &middot; everyone buys, so there
+                  is nothing to decide
                 </>
               ) : (
                 <>
@@ -151,13 +157,45 @@ export default function MatchTracker() {
             </div>
           </div>
 
+          {ood && (
+            <div className="notice">
+              <b>Off the map</b>
+              <span>
+                A pistol round with real money in it never happens, so the model has never seen
+                this and any number it gave you would be invented. Check the credits above.
+              </span>
+            </div>
+          )}
+
           <div className="econ">
             <div className="box">
               <span className="label">You</span>
-              <span className="v" style={{ color: "var(--def)" }}>
-                {money(eco.you)}
+              <input
+                type="number"
+                className="v"
+                value={eco.you}
+                min={0}
+                max={9000}
+                step={100}
+                aria-label="Your credits"
+                onChange={(e) =>
+                  setMatch({
+                    ...match,
+                    yourCreditsOverride: Math.max(0, Math.min(9000, Number(e.target.value))),
+                  })
+                }
+                style={{
+                  color: "var(--def)",
+                  background: "transparent",
+                  border: "1px solid var(--line)",
+                  padding: "2px 6px",
+                  width: "100%",
+                }}
+              />
+              <span className="muted">
+                {advice.yourBracket} &middot;{" "}
+                {match.yourCreditsOverride === null ? "estimated, type to correct" : "yours, exact"}
               </span>
-              <span className="muted">{advice.yourBracket}</span>
             </div>
             <div className="box">
               <span className="label">Enemy</span>
