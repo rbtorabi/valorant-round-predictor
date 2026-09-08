@@ -49,8 +49,4 @@ def fetch(url: str, *, use_cache: bool = True) -> str:
     return html
 
 
-# TODO(next session): inspect a real match page and write the parsers.
-#   - parse_match_list(html) -> list[match_url]
-#   - parse_match(html)      -> match / maps / rounds dicts
-# Held back on purpose: writing selectors against a page I have not read yet
-# produces code that looks done and is not.
+# Parsing lives in parse.py.

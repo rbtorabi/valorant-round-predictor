@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS matches (
     vlr_match_id  TEXT UNIQUE NOT NULL,
     url           TEXT NOT NULL,
     event         TEXT,
+    series        TEXT,
     played_at     TEXT,
     team_a        TEXT,
     team_b        TEXT,

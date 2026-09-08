@@ -5,7 +5,7 @@ score, both teams' economy, and side — trained on professional match data
 scraped from VLR.gg. Ships as an interactive web app where you set the board
 state and watch the odds move.
 
-> **Status:** in progress. Scraper fetch layer and schema are in; parsers,
+> **Status:** in progress. Scraping and parsing work end to end; the crawl,
 > model, and web app are next. See [Roadmap](#roadmap).
 
 ## Why pre-round, and not a live win-probability curve
@@ -35,6 +35,22 @@ headline metric is Brier score plus a reliability curve, not accuracy.
 **Scraping is cached and resumable.** Pages are written to `data/raw/` on first
 fetch, and already-scraped match IDs are skipped, so re-parsing costs nothing
 and an interrupted crawl picks up where it stopped.
+
+## Where the data comes from
+
+Two pages are needed per match, because they carry different halves of a round:
+
+| Page | Provides |
+| --- | --- |
+| match page | winner, side, and win condition (elim / spike / defuse / time) |
+| `?tab=economy` | exact loadout value and bank for both teams, per round |
+
+They join on `(game_id, round_num)`. Loadout value is bucketed into VLR's own
+buy types — eco `<$5k`, semi-eco `$5-10k`, semi-buy `$10-20k`, full-buy `$20k+`.
+
+Parser correctness is checked against invariants rather than by eyeballing:
+attacking and defending sides must swap between rounds 12 and 13, round totals
+must match the economy table's row count, and no round may be missing credits.
 
 ## Stack
 
@@ -68,7 +84,7 @@ python -m scraper.db
 ## Roadmap
 
 - [x] Repo, schema, polite cached fetch layer
-- [ ] Match list + match page parsers
+- [x] Match list + match page parsers
 - [ ] Crawl to ~500 matches / ~40k rounds
 - [ ] EDA and feature engineering
 - [ ] Logistic baseline, then LightGBM
