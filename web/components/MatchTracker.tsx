@@ -102,22 +102,35 @@ export default function MatchTracker() {
     youAttacking: attacking,
   });
 
+  // Updates go through the functional form because two taps landing before a
+  // re-render would otherwise overwrite each other, silently dropping a round.
+  // A dropped round corrupts every economy estimate after it.
   const record = (outcome: RoundOutcome) =>
-    setMatch({
-      ...match,
-      history: [...match.history, { round, outcome, youAttacking: attacking }],
-      // a recorded round invalidates any manual correction
-      enemyCreditsOverride: null,
-      yourCreditsOverride: null,
+    setMatch((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        history: [
+          ...prev.history,
+          { round: currentRound(prev), outcome, youAttacking: youAreAttacking(prev) },
+        ],
+        // a recorded round invalidates any manual correction
+        enemyCreditsOverride: null,
+        yourCreditsOverride: null,
+      };
     });
 
   const undo = () =>
-    setMatch({ ...match, history: match.history.slice(0, -1) });
+    setMatch((prev) => (prev ? { ...prev, history: prev.history.slice(0, -1) } : prev));
 
   const nudgeEnemy = (delta: number) =>
-    setMatch({
-      ...match,
-      enemyCreditsOverride: Math.max(0, Math.min(9000, eco.them + delta)),
+    setMatch((prev) => {
+      if (!prev) return prev;
+      const current = estimateEconomy(prev).them;
+      return {
+        ...prev,
+        enemyCreditsOverride: Math.max(0, Math.min(9000, current + delta)),
+      };
     });
 
   return (
@@ -178,12 +191,10 @@ export default function MatchTracker() {
                 max={9000}
                 step={100}
                 aria-label="Your credits"
-                onChange={(e) =>
-                  setMatch({
-                    ...match,
-                    yourCreditsOverride: Math.max(0, Math.min(9000, Number(e.target.value))),
-                  })
-                }
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(9000, Number(e.target.value)));
+                  setMatch((prev) => (prev ? { ...prev, yourCreditsOverride: v } : prev));
+                }}
                 style={{
                   color: "var(--def)",
                   background: "transparent",
