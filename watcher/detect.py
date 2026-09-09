@@ -62,6 +62,9 @@ class RegionWatcher:
     _confirmed: np.ndarray | None = field(default=None, repr=False)
     _candidate: np.ndarray | None = field(default=None, repr=False)
     _candidate_seen: int = field(default=0, repr=False)
+    # how far the current frame sits from what we last believed, kept so the
+    # two regions can be compared when both look like they moved
+    last_difference: float = field(default=0.0, repr=False)
     # None means "never fired"; starting at 0.0 would compare the first
     # detection against time zero and swallow it on a freshly booted machine.
     _last_fired: float | None = field(default=None, repr=False)
@@ -78,7 +81,8 @@ class RegionWatcher:
             self._confirmed = mask
             return False
 
-        if shape_difference(mask, self._confirmed) < self.change_fraction:
+        self.last_difference = shape_difference(mask, self._confirmed)
+        if self.last_difference < self.change_fraction:
             # back to what we already knew; whatever we were tracking was noise
             self._candidate, self._candidate_seen = None, 0
             return False
@@ -134,8 +138,21 @@ class RoundDetector:
         # alt-tab, or a resolution change. Report nothing rather than invent.
         if ally_changed and enemy_changed:
             return None
+
+        # A real round moves exactly one numeral, and moves it a lot. The bar
+        # behind a numeral also shifts as players die, which is a small change
+        # in the same region - and because confirming a change costs several
+        # samples, that noise could be confirmed before the numeral that
+        # actually moved, reporting the wrong side. Measured on a live match:
+        # a lost round was reported as a win for exactly this reason.
+        #
+        # So a side only wins the call if it also moved more than the other.
         if ally_changed:
+            if self.enemy.last_difference > self.ally.last_difference:
+                return None
             return "won"
         if enemy_changed:
+            if self.ally.last_difference > self.enemy.last_difference:
+                return None
             return "lost"
         return None
