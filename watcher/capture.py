@@ -15,7 +15,8 @@ except ImportError as exc:  # pragma: no cover - dependency guard
         "mss is not installed. Run: pip install -r requirements.txt"
     ) from exc
 
-from watcher.config import WatcherConfig
+from watcher.banner import BANNER_REGION
+from watcher.config import Region, WatcherConfig
 
 
 def open_screen():
@@ -39,6 +40,12 @@ class ScreenSource:
         self.ally_box = self._absolute(ally)
         self.enemy_box = self._absolute(enemy)
 
+        # the HUD message card, which states the round result outright
+        left, top, width, height = BANNER_REGION
+        self.banner_box = self._absolute(
+            Region(left, top, width, height).to_pixels(self.width, self.height)
+        )
+
     def _absolute(self, box: dict) -> dict:
         return {
             "left": self._monitor["left"] + box["left"],
@@ -53,8 +60,13 @@ class ScreenSource:
         # luminance; the score is high-contrast so colour adds nothing
         return (0.299 * pixels[:, :, 2] + 0.587 * pixels[:, :, 1] + 0.114 * pixels[:, :, 0])
 
-    def frames(self) -> tuple[np.ndarray, np.ndarray]:
-        return self._grab(self.ally_box), self._grab(self.enemy_box)
+    def frames(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Ally score, enemy score, and the message card."""
+        return (
+            self._grab(self.ally_box),
+            self._grab(self.enemy_box),
+            self._grab(self.banner_box),
+        )
 
     def close(self) -> None:
         self._sct.close()

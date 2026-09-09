@@ -112,8 +112,13 @@ python -m watcher.preview   # check the regions are aimed at the score
 python -m watcher.run       # then leave this running
 ```
 
-**It does not read the score, it only notices that the score changed.** If your
-numeral changes you scored; if theirs does, they did. That removes OCR, fonts,
+Rounds are read from two independent signals. The stronger one is the HUD
+message card, which says **WON** or **LOST** outright - nothing to infer. The
+weaker one is the scoreline changing, which still fires when the banner was
+missed. Both feed one debounce, so a round that trips both is still one round.
+
+The scoreline half does not read the score, it only notices that the score
+changed. If your numeral changes you scored; if theirs does, they did. That removes OCR, fonts,
 digit templates, resolution handling and localisation from the problem.
 
 The catch is that Valorant draws the scoreline over the live 3D world, so the
@@ -130,9 +135,18 @@ flashbang looks like; and a score cannot change twice inside twenty seconds.
 Both numerals changing at once is refused outright, since that means the
 scoreboard overlay or an alt-tab.
 
-The tests run against real numerals cropped from an actual match, and the
-important one asserts that camera movement behind the score reads as nothing
-at all.
+The message card is recognised the same way - reduced to a mask of bright
+glyph pixels, compared against templates cropped from real frames. The
+threshold had to be measured rather than guessed: at 195 the mask was 60%
+sunlit wall; at 240 text frames carry 12-17% ink against 0.1% for empty ones.
+Messages that share furniture - YOU HAVE THE SPIKE and SPIKE PLANTED draw the
+same icon and mean opposite things - are resolved by refusing to answer when
+two templates score within a margin of each other.
+
+The tests run against real frames cropped from an actual match. The important
+ones assert that camera movement behind the score reads as nothing at all,
+and that a round seen by both the banner and the scoreline is still counted
+once rather than twice.
 
 What it cannot see is a spike plant, worth $300 to attackers, so the plant
 buttons stay on screen in automatic mode.

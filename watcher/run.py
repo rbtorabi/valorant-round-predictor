@@ -15,7 +15,7 @@ import time
 
 from watcher import config as config_module
 from watcher.capture import ScreenSource
-from watcher.detect import RoundDetector
+from watcher.rounds import RoundSource
 from watcher.server import PORT, WatcherState, serve
 
 LABEL = {"won": "round won", "lost": "round lost"}
@@ -30,7 +30,7 @@ def main() -> None:
 
     cfg = config_module.load()
     source = ScreenSource(cfg, monitor_index=args.monitor)
-    detector = RoundDetector(
+    detector = RoundSource(
         change_fraction=cfg.change_fraction,
         debounce_seconds=cfg.debounce_seconds,
         stable_frames=cfg.stable_frames,
@@ -44,12 +44,13 @@ def main() -> None:
 
     try:
         while True:
-            ally, enemy = source.frames()
-            outcome = detector.update(ally, enemy)
-            if outcome:
+            ally, enemy, banner = source.frames()
+            found = detector.update(ally, enemy, banner)
+            if found:
+                outcome, how = found
                 state.add(outcome)
                 print(f"  {time.strftime('%H:%M:%S')}  {LABEL[outcome]}"
-                      f"  ({len(state.snapshot())} rounds seen)")
+                      f"  (from the {how}, {len(state.snapshot())} rounds seen)")
             time.sleep(cfg.poll_seconds)
     except KeyboardInterrupt:
         print("\nstopped")
