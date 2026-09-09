@@ -28,3 +28,4 @@ Thumbs.db
 data/preview/
 data/watcher.json
 data/collect/
+data/diagnostics.jsonl

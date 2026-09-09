@@ -33,8 +33,16 @@ BANNER_REGION = (0.3800, 0.1100, 0.2400, 0.1100)
 # Measured on real frames: banner text clears 240 while even sunlit walls
 # do not. At 195 the mask was 60% scenery and comparisons were meaningless.
 BRIGHT_THRESHOLD = 240.0
-# Below this overlap a match is not believable; better to report nothing.
-MIN_OVERLAP = 0.45
+# How much of a template's lettering must be present in the frame. Scoring
+# by coverage rather than by intersection-over-union matters on bright maps:
+# scenery that clears the brightness threshold adds ink the template does not
+# have, which collapses IoU even when every letter lines up. In a live match
+# that silently reduced the banner - the primary signal - to never firing.
+MIN_COVERAGE = 0.60
+
+# A frame where almost everything is bright carries no information; that is a
+# white wall or a whiteout, not a message.
+MAX_INK = 0.45
 # A card with almost no bright pixels is an empty region, not a message.
 MIN_INK = 0.02
 
@@ -51,14 +59,14 @@ def to_mask(image: np.ndarray | Image.Image) -> np.ndarray:
     return image > BRIGHT_THRESHOLD
 
 
-def overlap(a: np.ndarray, b: np.ndarray) -> float:
-    """Intersection over union of two glyph masks."""
-    if a.shape != b.shape:
+def coverage(frame_mask: np.ndarray, template: np.ndarray) -> float:
+    """What fraction of the template's lettering the frame contains."""
+    if frame_mask.shape != template.shape:
         return 0.0
-    union = int(np.logical_or(a, b).sum())
-    if union == 0:
+    ink = int(template.sum())
+    if ink == 0:
         return 0.0
-    return float(np.logical_and(a, b).sum()) / union
+    return float(np.logical_and(frame_mask, template).sum()) / ink
 
 
 def load_templates() -> dict[str, np.ndarray]:
@@ -76,18 +84,18 @@ def classify(frame: np.ndarray | Image.Image,
     templates = load_templates() if templates is None else templates
     mask = to_mask(frame)
 
-    if mask.mean() < MIN_INK:
+    if mask.mean() < MIN_INK or mask.mean() > MAX_INK:
         return None, 0.0
 
     scored = sorted(
-        ((overlap(mask, template), label) for label, template in templates.items()),
+        ((coverage(mask, template), label) for label, template in templates.items()),
         reverse=True,
     )
     if not scored:
         return None, 0.0
 
     best_score, best_label = scored[0]
-    if best_score < MIN_OVERLAP:
+    if best_score < MIN_COVERAGE:
         return None, best_score
 
     # two different messages scoring alike means we cannot tell them apart

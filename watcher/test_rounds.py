@@ -89,16 +89,32 @@ def main() -> None:
 
     s = RoundSource()
     s.update(QUIET, QUIET, blank, clear_timer, now=0.0)
-    s.update(QUIET, QUIET, blank, planted_timer, now=1.0)      # spike goes down
-    s.update(QUIET, QUIET, blank, clear_timer, now=2.0)        # and goes away
-    results.append(check("a plant earlier in the round is reported with it",
-                         s.update(QUIET, QUIET, banner("won"), clear_timer, now=3.0),
+    # the spike stays down for the whole fuse, so the red persists
+    for i in range(6):
+        s.update(QUIET, QUIET, blank, planted_timer, now=1.0 + i * 0.5)
+    s.update(QUIET, QUIET, blank, clear_timer, now=5.0)        # defused or blown
+    results.append(check("a sustained plant is reported with its round",
+                         s.update(QUIET, QUIET, banner("won"), clear_timer, now=6.0),
                          ("won", "banner", True)))
 
+    # a single red frame is a flash, not a plant
+    s = RoundSource()
+    s.update(QUIET, QUIET, blank, clear_timer, now=0.0)
+    s.update(QUIET, QUIET, blank, planted_timer, now=1.0)
+    s.update(QUIET, QUIET, blank, clear_timer, now=1.5)
+    results.append(check("one red frame is not a plant",
+                         s.update(QUIET, QUIET, banner("won"), clear_timer, now=2.0),
+                         ("won", "banner", False)))
+
     # and does not carry into the next round
-    got = s.update(QUIET, QUIET, banner("lost"), clear_timer, now=40.0)
+    s = RoundSource()
+    s.update(QUIET, QUIET, blank, clear_timer, now=0.0)
+    for i in range(6):
+        s.update(QUIET, QUIET, blank, planted_timer, now=1.0 + i * 0.5)
+    s.update(QUIET, QUIET, banner("won"), clear_timer, now=6.0)
     results.append(check("the plant does not carry into the next round",
-                         got, ("lost", "banner", False)))
+                         s.update(QUIET, QUIET, banner("lost"), clear_timer, now=40.0),
+                         ("lost", "banner", False)))
 
     # a buy phase card is not a round result
     s = RoundSource()

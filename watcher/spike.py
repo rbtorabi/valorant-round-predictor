@@ -11,9 +11,16 @@ seconds - so it cannot be missed at any sane sampling rate. It is also
 unambiguous in a way the message is not: it is there because the spike is
 actually planted, not because someone started planting.
 
-Measured on a real match: planted frames carry 0.245-0.251 strongly-red
-pixels, every other frame 0.08 or less, including warm sunlit scenery behind
-a translucent timer.
+Measured on collected frames: planted frames carried 0.245-0.251 strongly-red
+pixels against 0.08 or less elsewhere. That separation held on the maps those
+samples came from and then failed in a live match on a different one, where
+every round was reported as planted - including a round that ended on the
+timer expiring, which by definition had no spike down.
+
+A single red frame is therefore not enough. A plant holds the timer red for
+the whole fuse, some forty-five seconds, so requiring the red to persist for
+several consecutive samples costs nothing real and rejects a transient flash,
+a red-lit skybox drifting past, or a damage vignette.
 """
 
 import numpy as np
@@ -44,3 +51,27 @@ def red_fraction(frame: np.ndarray | Image.Image) -> float:
 
 def is_planted(frame: np.ndarray | Image.Image) -> bool:
     return red_fraction(frame) >= MIN_RED_FRACTION
+
+
+# A plant holds for the whole fuse, so insisting on several consecutive red
+# samples loses nothing and rejects transient red.
+MIN_CONSECUTIVE = 5
+
+
+class PlantWatcher:
+    """Reports a plant only once the timer has been red for a while."""
+
+    def __init__(self, min_consecutive: int = MIN_CONSECUTIVE) -> None:
+        self.min_consecutive = min_consecutive
+        self._run = 0
+
+    def update(self, timer_frame) -> bool:
+        """True while the spike is confirmed down."""
+        if is_planted(timer_frame):
+            self._run += 1
+        else:
+            self._run = 0
+        return self._run >= self.min_consecutive
+
+    def reset(self) -> None:
+        self._run = 0

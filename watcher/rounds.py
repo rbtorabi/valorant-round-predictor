@@ -23,7 +23,7 @@ import numpy as np
 
 from watcher.banner import classify
 from watcher.detect import RoundDetector
-from watcher.spike import is_planted
+from watcher.spike import PlantWatcher
 
 RESULT_BANNERS = {"won": "won", "lost": "lost"}
 
@@ -41,8 +41,10 @@ class RoundSource:
     _last_banner: str | None = field(default=None, repr=False)
     # whether the spike went down at any point in the round being played
     _planted_this_round: bool = field(default=False, repr=False)
+    _plant: PlantWatcher = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        self._plant = PlantWatcher()
         self._score = RoundDetector(
             change_fraction=self.change_fraction,
             # the shared debounce below is what actually spaces rounds out
@@ -68,9 +70,11 @@ class RoundSource:
         """
         now = time.monotonic() if now is None else now
 
-        # a plant seen anywhere in the round counts, so this latches until the
-        # round is reported and then resets
-        if timer_frame is not None and is_planted(timer_frame):
+        # A plant seen anywhere in the round counts, so this latches until the
+        # round is reported and then resets. The watcher underneath insists the
+        # timer stays red for several samples, because a single red frame
+        # turned out to be something else entirely on a red-lit map.
+        if timer_frame is not None and self._plant.update(timer_frame):
             self._planted_this_round = True
 
         banner_label = None
@@ -97,5 +101,6 @@ class RoundSource:
     def _emit(self, outcome: str, source: str, now: float) -> tuple[str, str, bool]:
         planted = self._planted_this_round
         self._planted_this_round = False
+        self._plant.reset()
         self._last_emit = now
         return outcome, source, planted
