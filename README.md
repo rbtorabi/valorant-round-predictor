@@ -112,17 +112,27 @@ python -m watcher.preview   # check the regions are aimed at the score
 python -m watcher.run       # then leave this running
 ```
 
-**It does not read the score, it only notices that the score changed.** If the
-left number's pixels move, you scored; if the right number's move, they did.
-That one decision removes OCR, fonts, digit templates, resolution handling and
-localisation from the problem - a round detector that works on any display in
-any language, built out of an image diff.
+**It does not read the score, it only notices that the score changed.** If your
+numeral changes you scored; if theirs does, they did. That removes OCR, fonts,
+digit templates, resolution handling and localisation from the problem.
 
-Two guards keep it from firing on noise: a change has to move a meaningful
-fraction of the region rather than a few antialiased pixels, and a score cannot
-change twice inside twenty seconds because a round cannot end twice that fast.
-Both sides changing at once is refused outright, since that means a scoreboard
-overlay or an alt-tab rather than a round.
+The catch is that Valorant draws the scoreline over the live 3D world, so the
+pixels behind the digits change every time you move the mouse. A plain image
+diff fires constantly. So each frame is reduced to a mask of the bright glyph
+pixels - the numerals are near-white, the world behind is mid-tone, and the
+measured separation is wide - and those masks are compared. Turning the camera
+changes the background but not the shape of the numeral.
+
+Three guards, each for a real failure: a new shape must hold for several
+consecutive samples, so a muzzle flash cannot pass as a round; a frame where
+too much of the region is bright is discarded as unreadable, which is what a
+flashbang looks like; and a score cannot change twice inside twenty seconds.
+Both numerals changing at once is refused outright, since that means the
+scoreboard overlay or an alt-tab.
+
+The tests run against real numerals cropped from an actual match, and the
+important one asserts that camera movement behind the score reads as nothing
+at all.
 
 What it cannot see is a spike plant, worth $300 to attackers, so the plant
 buttons stay on screen in automatic mode.

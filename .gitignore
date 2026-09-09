@@ -25,3 +25,5 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+data/preview/
+data/watcher.json

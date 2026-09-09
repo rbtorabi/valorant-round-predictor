@@ -31,9 +31,9 @@ def main() -> None:
     cfg = config_module.load()
     source = ScreenSource(cfg, monitor_index=args.monitor)
     detector = RoundDetector(
-        pixel_threshold=cfg.pixel_threshold,
         change_fraction=cfg.change_fraction,
         debounce_seconds=cfg.debounce_seconds,
+        stable_frames=cfg.stable_frames,
     )
     state = WatcherState()
     serve(state, port=args.port)

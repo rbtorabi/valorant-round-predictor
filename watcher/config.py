@@ -6,8 +6,9 @@ which is enough to know a round ended and who won it. That is why there is no
 OCR here, and why this works at any resolution or in any language.
 
 Defaults are expressed as fractions of the screen, because the HUD is centred
-and scales with resolution. They will be close on a standard 16:9 display and
-can be corrected in the saved config after checking `python -m watcher.preview`.
+and scales with resolution. They were measured off a real 1920x1080 frame and
+should carry to other 16:9 displays; check with `python -m watcher.preview` and
+correct data/watcher.json if your crops miss.
 """
 
 import json
@@ -43,20 +44,23 @@ class WatcherConfig:
     ally_score: Region = None  # type: ignore[assignment]
     enemy_score: Region = None  # type: ignore[assignment]
 
-    # A pixel must differ by more than this (0-255) to count as changed.
-    pixel_threshold: int = 40
-    # And this fraction of the region must have changed, to ignore flicker.
-    change_fraction: float = 0.04
+    # How much two glyph shapes must disagree to count as a different
+    # numeral, relative to how much ink they hold.
+    change_fraction: float = 0.25
+    # A new shape must persist this many samples before it is believed.
+    stable_frames: int = 3
     # A score cannot change twice within this many seconds.
     debounce_seconds: float = 20.0
     # How often to sample the screen.
     poll_seconds: float = 0.5
 
     def __post_init__(self) -> None:
+        # Measured off a real 1920x1080 frame, as fractions so they carry to
+        # other 16:9 resolutions. Wide enough for a two-digit score.
         if self.ally_score is None:
-            self.ally_score = Region(left=0.4590, top=0.0130, width=0.0230, height=0.0380)
+            self.ally_score = Region(left=0.4073, top=0.0222, width=0.0365, height=0.0481)
         if self.enemy_score is None:
-            self.enemy_score = Region(left=0.5180, top=0.0130, width=0.0230, height=0.0380)
+            self.enemy_score = Region(left=0.5510, top=0.0222, width=0.0365, height=0.0481)
 
 
 def load() -> WatcherConfig:
@@ -66,8 +70,8 @@ def load() -> WatcherConfig:
     return WatcherConfig(
         ally_score=Region(**raw["ally_score"]),
         enemy_score=Region(**raw["enemy_score"]),
-        pixel_threshold=raw.get("pixel_threshold", 40),
-        change_fraction=raw.get("change_fraction", 0.04),
+        change_fraction=raw.get("change_fraction", 0.25),
+        stable_frames=raw.get("stable_frames", 3),
         debounce_seconds=raw.get("debounce_seconds", 20.0),
         poll_seconds=raw.get("poll_seconds", 0.5),
     )
