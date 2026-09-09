@@ -49,12 +49,12 @@ def main() -> None:
     s = RoundSource()
     s.update(QUIET, QUIET, blank, now=0.0)
     results.append(check("a WON banner reports a win from the banner",
-                         s.update(QUIET, QUIET, banner("won"), now=1.0), ("won", "banner")))
+                         s.update(QUIET, QUIET, banner("won"), now=1.0), ("won", "banner", False)))
 
     s = RoundSource()
     s.update(QUIET, QUIET, blank, now=0.0)
     results.append(check("a LOST banner reports a loss from the banner",
-                         s.update(QUIET, QUIET, banner("lost"), now=1.0), ("lost", "banner")))
+                         s.update(QUIET, QUIET, banner("lost"), now=1.0), ("lost", "banner", False)))
 
     # a banner lingers on screen; only its arrival counts
     s = RoundSource()
@@ -62,7 +62,7 @@ def main() -> None:
     first = s.update(QUIET, QUIET, banner("won"), now=1.0)
     lingering = [s.update(QUIET, QUIET, banner("won"), now=t) for t in (2.0, 3.0, 40.0)]
     results.append(check("a lingering banner is not a second round",
-                         (first, set(lingering)), (("won", "banner"), {None})))
+                         (first, set(lingering)), (("won", "banner", False), {None})))
 
     # banner and score describing the same round is still one round
     s = RoundSource()
@@ -70,14 +70,35 @@ def main() -> None:
     from_banner = s.update(QUIET, QUIET, banner("won"), now=1.0)
     from_score = [s.update(DIGIT, QUIET, blank, now=t) for t in (2.0, 2.5, 3.0, 3.5)]
     results.append(check("the score agreeing does not add a second round",
-                         (from_banner, set(from_score)), (("won", "banner"), {None})))
+                         (from_banner, set(from_score)), (("won", "banner", False), {None})))
 
     # with no banner at all, the score still works
     s = RoundSource()
     s.update(QUIET, QUIET, blank, now=0.0)
     scored = [s.update(DIGIT, QUIET, blank, now=t) for t in (1.0, 1.5, 2.0, 2.5)]
     results.append(check("the score still reports when no banner is seen",
-                         next((x for x in scored if x), None), ("won", "score")))
+                         next((x for x in scored if x), None), ("won", "score", False)))
+
+    # a plant seen mid-round is reported with the round it belongs to
+    planted_timer = np.asarray(
+        Image.open(TEMPLATE_DIR.parent / "timer_planted.png").convert("RGB")
+    ).astype(np.float32)
+    clear_timer = np.asarray(
+        Image.open(TEMPLATE_DIR.parent / "timer_normal.png").convert("RGB")
+    ).astype(np.float32)
+
+    s = RoundSource()
+    s.update(QUIET, QUIET, blank, clear_timer, now=0.0)
+    s.update(QUIET, QUIET, blank, planted_timer, now=1.0)      # spike goes down
+    s.update(QUIET, QUIET, blank, clear_timer, now=2.0)        # and goes away
+    results.append(check("a plant earlier in the round is reported with it",
+                         s.update(QUIET, QUIET, banner("won"), clear_timer, now=3.0),
+                         ("won", "banner", True)))
+
+    # and does not carry into the next round
+    got = s.update(QUIET, QUIET, banner("lost"), clear_timer, now=40.0)
+    results.append(check("the plant does not carry into the next round",
+                         got, ("lost", "banner", False)))
 
     # a buy phase card is not a round result
     s = RoundSource()

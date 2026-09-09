@@ -44,12 +44,13 @@ def main() -> None:
 
     try:
         while True:
-            ally, enemy, banner = source.frames()
-            found = detector.update(ally, enemy, banner)
+            ally, enemy, banner, timer = source.frames()
+            found = detector.update(ally, enemy, banner, timer)
             if found:
-                outcome, how = found
-                state.add(outcome)
-                print(f"  {time.strftime('%H:%M:%S')}  {LABEL[outcome]}"
+                outcome, how, planted = found
+                state.add(outcome, planted)
+                spike = ", spike planted" if planted else ""
+                print(f"  {time.strftime('%H:%M:%S')}  {LABEL[outcome]}{spike}"
                       f"  (from the {how}, {len(state.snapshot())} rounds seen)")
             time.sleep(cfg.poll_seconds)
     except KeyboardInterrupt:

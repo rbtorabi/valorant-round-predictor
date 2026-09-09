@@ -17,6 +17,7 @@ except ImportError as exc:  # pragma: no cover - dependency guard
 
 from watcher.banner import BANNER_REGION
 from watcher.config import Region, WatcherConfig
+from watcher.spike import TIMER_REGION
 
 
 def open_screen():
@@ -41,9 +42,12 @@ class ScreenSource:
         self.enemy_box = self._absolute(enemy)
 
         # the HUD message card, which states the round result outright
-        left, top, width, height = BANNER_REGION
         self.banner_box = self._absolute(
-            Region(left, top, width, height).to_pixels(self.width, self.height)
+            Region(*BANNER_REGION).to_pixels(self.width, self.height)
+        )
+        # the round timer, which turns red for as long as the spike is down
+        self.timer_box = self._absolute(
+            Region(*TIMER_REGION).to_pixels(self.width, self.height)
         )
 
     def _absolute(self, box: dict) -> dict:
@@ -60,12 +64,19 @@ class ScreenSource:
         # luminance; the score is high-contrast so colour adds nothing
         return (0.299 * pixels[:, :, 2] + 0.587 * pixels[:, :, 1] + 0.114 * pixels[:, :, 0])
 
-    def frames(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Ally score, enemy score, and the message card."""
+    def _grab_colour(self, box: dict) -> np.ndarray:
+        """BGRA from the screen, returned as RGB - the spike test needs hue."""
+        shot = self._sct.grab(box)
+        pixels = np.asarray(shot)[:, :, :3].astype(np.float32)
+        return pixels[:, :, ::-1]
+
+    def frames(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Ally score, enemy score, the message card, and the timer in colour."""
         return (
             self._grab(self.ally_box),
             self._grab(self.enemy_box),
             self._grab(self.banner_box),
+            self._grab_colour(self.timer_box),
         )
 
     def close(self) -> None:

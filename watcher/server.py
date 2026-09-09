@@ -21,19 +21,19 @@ class WatcherState:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._rounds: list[str] = []
+        self._rounds: list[dict] = []
 
-    def add(self, outcome: str) -> None:
+    def add(self, outcome: str, planted: bool = False) -> None:
         with self._lock:
-            self._rounds.append(outcome)
+            self._rounds.append({"outcome": outcome, "planted": planted})
 
     def reset(self) -> None:
         with self._lock:
             self._rounds.clear()
 
-    def snapshot(self) -> list[str]:
+    def snapshot(self) -> list[dict]:
         with self._lock:
-            return list(self._rounds)
+            return [dict(r) for r in self._rounds]
 
 
 def make_handler(state: WatcherState):

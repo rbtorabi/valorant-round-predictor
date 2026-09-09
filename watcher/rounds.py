@@ -10,6 +10,10 @@ Two independent signals, in order of trust:
 
 Both feed one debounce, so a round that trips both is still one round. A
 Valorant round cannot end twice in twenty seconds, which makes that safe.
+
+Alongside them the timer is watched for the spike being down. That is not a
+round signal - it decides whether the round carried a plant, which is worth
+$300 to the attacking side and is otherwise invisible in the result.
 """
 
 import time
@@ -19,6 +23,7 @@ import numpy as np
 
 from watcher.banner import classify
 from watcher.detect import RoundDetector
+from watcher.spike import is_planted
 
 RESULT_BANNERS = {"won": "won", "lost": "lost"}
 
@@ -34,6 +39,8 @@ class RoundSource:
     _score: RoundDetector = field(init=False, repr=False)
     _last_emit: float | None = field(default=None, repr=False)
     _last_banner: str | None = field(default=None, repr=False)
+    # whether the spike went down at any point in the round being played
+    _planted_this_round: bool = field(default=False, repr=False)
 
     def __post_init__(self) -> None:
         self._score = RoundDetector(
@@ -51,10 +58,20 @@ class RoundSource:
         ally_frame: np.ndarray,
         enemy_frame: np.ndarray,
         banner_frame: np.ndarray | None = None,
+        timer_frame: np.ndarray | None = None,
         now: float | None = None,
-    ) -> tuple[str, str] | None:
-        """Returns (outcome, source) or None. Source is 'banner' or 'score'."""
+    ) -> tuple[str, str, bool] | None:
+        """Returns (outcome, source, planted) or None.
+
+        `source` is 'banner' or 'score'. `planted` says whether the spike was
+        down at any point during the round that just ended.
+        """
         now = time.monotonic() if now is None else now
+
+        # a plant seen anywhere in the round counts, so this latches until the
+        # round is reported and then resets
+        if timer_frame is not None and is_planted(timer_frame):
+            self._planted_this_round = True
 
         banner_label = None
         if banner_frame is not None:
@@ -70,11 +87,15 @@ class RoundSource:
             return None
 
         if arrived and banner_label in RESULT_BANNERS:
-            self._last_emit = now
-            return RESULT_BANNERS[banner_label], "banner"
+            return self._emit(RESULT_BANNERS[banner_label], "banner", now)
 
         if score_outcome:
-            self._last_emit = now
-            return score_outcome, "score"
+            return self._emit(score_outcome, "score", now)
 
         return None
+
+    def _emit(self, outcome: str, source: str, now: float) -> tuple[str, str, bool]:
+        planted = self._planted_this_round
+        self._planted_this_round = False
+        self._last_emit = now
+        return outcome, source, planted

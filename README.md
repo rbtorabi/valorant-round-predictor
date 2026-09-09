@@ -148,8 +148,14 @@ ones assert that camera movement behind the score reads as nothing at all,
 and that a round seen by both the banner and the scoreline is still counted
 once rather than twice.
 
-What it cannot see is a spike plant, worth $300 to attackers, so the plant
-buttons stay on screen in automatic mode.
+Spike plants are picked up too, and not from the message. Reading SPIKE
+PLANTED kept failing - it shows for a couple of seconds and sampling landed
+either side of it, catching SPIKE INITIATING instead, which is the plant in
+progress and pays nothing if it is cancelled. The timer is the better signal:
+once the spike is down the round timer becomes a red spike icon that stays for
+the whole fuse, so it cannot be missed. Measured on a real match, planted
+frames carry 0.25 strongly-red pixels against 0.08 or less for everything
+else, warm sunlit scenery included.
 
 The watcher is a sensor and nothing more: it reports `won` or `lost` over
 `http://127.0.0.1:8731/state`, and the web app owns every rule. Keeping the

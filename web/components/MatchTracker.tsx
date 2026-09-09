@@ -59,7 +59,7 @@ export default function MatchTracker() {
     try {
       const res = await fetch(`${WATCHER_URL}/state`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      const data: { rounds: string[] } = await res.json();
+      const data: { rounds: { outcome: string; planted: boolean }[] } = await res.json();
       setAutoStatus("live");
 
       const fresh = data.rounds.slice(appliedRef.current);
@@ -69,18 +69,26 @@ export default function MatchTracker() {
       setMatch((prev) => {
         if (!prev) return prev;
         let next = prev;
-        for (const outcome of fresh) {
+        for (const seen of fresh) {
           if (matchResult(next)) break; // stop at match point
-          if (outcome !== "won" && outcome !== "lost") continue;
+          if (seen.outcome !== "won" && seen.outcome !== "lost") continue;
+
+          // The plant bonus is paid to whoever was attacking, so a plant only
+          // changes your economy on your attacking rounds. The watcher sees
+          // the spike go down; it does not know whose it was.
+          const attacking = youAreAttacking(next);
+          const outcome: RoundOutcome =
+            seen.planted && attacking
+              ? seen.outcome === "won"
+                ? "won-planted"
+                : "lost-planted"
+              : (seen.outcome as RoundOutcome);
+
           next = {
             ...next,
             history: [
               ...next.history,
-              {
-                round: currentRound(next),
-                outcome,
-                youAttacking: youAreAttacking(next),
-              },
+              { round: currentRound(next), outcome, youAttacking: attacking },
             ],
             enemyCreditsOverride: null,
             yourCreditsOverride: null,
@@ -416,8 +424,9 @@ export default function MatchTracker() {
 
           {auto && (
             <div className="muted">
-              Wins and losses record themselves from the scoreline. A spike plant is worth $300
-              and cannot be seen in the score, so tap the plant buttons when it matters.
+              Rounds record themselves from the result banner, with the scoreline as a
+              fallback. A spike going down is picked up from the timer, so plants are counted
+              too - the buttons below stay for correcting anything it gets wrong.
             </div>
           )}
 
