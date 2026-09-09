@@ -18,11 +18,17 @@ except ImportError as exc:  # pragma: no cover - dependency guard
 from watcher.config import WatcherConfig
 
 
+def open_screen():
+    """mss renamed its entry point; support both without a version pin."""
+    factory = getattr(mss, "MSS", None) or mss.mss
+    return factory()
+
+
 class ScreenSource:
     """Repeatedly grabs the configured regions as greyscale arrays."""
 
     def __init__(self, config: WatcherConfig, monitor_index: int = 1) -> None:
-        self._sct = mss.mss()
+        self._sct = open_screen()
         self._monitor = self._sct.monitors[monitor_index]
         self.width = self._monitor["width"]
         self.height = self._monitor["height"]
