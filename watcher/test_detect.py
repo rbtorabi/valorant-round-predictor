@@ -110,6 +110,30 @@ def main() -> None:
     results.append(check("a second change inside the debounce is blocked",
                          set(got), {None}))
 
+    # --- the failure seen in a real match ---------------------------------
+    # A lost round was reported as a win. The bar behind your own numeral
+    # shifts as players die, and that small change was confirmed before the
+    # enemy numeral that had actually moved.
+    def numeral(lo: int, hi: int) -> np.ndarray:
+        a = np.zeros((24, 18), dtype=np.float32)
+        a[8:18, lo:hi] = 255.0
+        return a
+
+    steady_ally = numeral(6, 9)
+    speckled_ally = steady_ally.copy()
+    speckled_ally[3, 1] = 255.0
+    enemy_before, enemy_after = numeral(6, 9), numeral(5, 12)
+
+    d = RoundDetector()
+    d.update(steady_ally, enemy_before, now=0.0)
+    seen = [
+        d.update(speckled_ally, enemy_after, now=float(t))
+        for t in np.arange(1.0, 5.0, 0.5)
+    ]
+    results.append(check(
+        "noise on your own numeral does not steal a round the enemy won",
+        next((x for x in seen if x), None), "lost"))
+
     print(f"\n{sum(results)}/{len(results)} passed")
     raise SystemExit(0 if all(results) else 1)
 
