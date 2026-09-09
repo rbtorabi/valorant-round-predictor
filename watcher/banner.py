@@ -44,7 +44,11 @@ MIN_COVERAGE = 0.60
 # white wall or a whiteout, not a message.
 MAX_INK = 0.45
 # A card with almost no bright pixels is an empty region, not a message.
-MIN_INK = 0.02
+# This was 0.02, set from template crops whose backgrounds happened to be
+# bright. In a live match the region never once reached it, so classification
+# was refused before any comparison happened and the banner never fired at
+# all. Lettering alone is a small share of a card this size.
+MIN_INK = 0.004
 
 # Some messages share furniture - "YOU HAVE THE SPIKE" and "SPIKE PLANTED"
 # draw the same icon beneath different words, and they mean opposite things.

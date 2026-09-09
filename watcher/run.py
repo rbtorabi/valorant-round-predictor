@@ -16,6 +16,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from PIL import Image
+
 from watcher import config as config_module
 from watcher.banner import classify
 from watcher.spike import red_fraction
@@ -30,6 +32,8 @@ LABEL = {"won": "round won", "lost": "round lost"}
 # of evidence once - the terminal had printed it and nothing had kept it.
 LOG_PATH = Path(__file__).resolve().parents[1] / "data" / "detections.jsonl"
 DIAG_PATH = Path(__file__).resolve().parents[1] / "data" / "diagnostics.jsonl"
+DEBUG_SHOTS = Path(__file__).resolve().parents[1] / "data" / "debug_banners"
+MAX_DEBUG_SHOTS = 400
 
 
 def append_json(path: Path, entry: dict) -> None:
@@ -70,6 +74,7 @@ def main() -> None:
     serve(state, port=args.port)
 
     samples = 0
+    shots = 0
 
     print(f"watching monitor {args.monitor} at {source.width}x{source.height}")
     print(f"serving detected rounds on http://127.0.0.1:{args.port}/state")
@@ -87,6 +92,16 @@ def main() -> None:
                 # missed round after the fact. Guessing from the outcome alone
                 # already sent me down one wrong path.
                 label, score = classify(banner)
+                ink = float((banner > 240.0).mean())
+                # Keep the pixels behind any frame that had lettering at all.
+                # Numbers alone could not distinguish "the region is wrong"
+                # from "no message was showing", and guessing between those
+                # wasted a whole round trip.
+                if ink > 0.002 and shots < MAX_DEBUG_SHOTS:
+                    DEBUG_SHOTS.mkdir(parents=True, exist_ok=True)
+                    Image.fromarray(banner.astype("uint8")).save(
+                        DEBUG_SHOTS / f"{shots:04d}_{ink:.4f}.png")
+                    shots += 1
                 # written as it happens, not buffered - a killed process
                 # would otherwise take the evidence with it, which is the
                 # mistake that lost a whole match's detections already
@@ -94,6 +109,9 @@ def main() -> None:
                     "at": datetime.now().isoformat(timespec="seconds"),
                     "banner": label,
                     "banner_score": round(score, 3),
+                    "banner_ink": round(ink, 4),
+                    "ally_ink": round(float((ally > 240.0).mean()), 4),
+                    "enemy_ink": round(float((enemy > 240.0).mean()), 4),
                     "red": round(red_fraction(timer), 3),
                 })
                 samples += 1
@@ -113,6 +131,8 @@ def main() -> None:
         source.close()
         if samples:
             print(f"wrote {samples} diagnostic samples to {DIAG_PATH}")
+        if shots:
+            print(f"saved {shots} banner crops to {DEBUG_SHOTS}")
 
 
 if __name__ == "__main__":
