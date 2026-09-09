@@ -11,7 +11,10 @@ Check the regions are aimed correctly first:
 """
 
 import argparse
+import json
 import time
+from datetime import datetime
+from pathlib import Path
 
 from watcher import config as config_module
 from watcher.capture import ScreenSource
@@ -19,6 +22,23 @@ from watcher.rounds import RoundSource
 from watcher.server import PORT, WatcherState, serve
 
 LABEL = {"won": "round won", "lost": "round lost"}
+
+# Detections are appended here as they happen. The state the web app polls is
+# held in memory and dies with the process, which lost a whole match's worth
+# of evidence once - the terminal had printed it and nothing had kept it.
+LOG_PATH = Path(__file__).resolve().parents[1] / "data" / "detections.jsonl"
+
+
+def record_to_log(outcome: str, source: str, planted: bool) -> None:
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "at": datetime.now().isoformat(timespec="seconds"),
+        "outcome": outcome,
+        "source": source,
+        "planted": planted,
+    }
+    with LOG_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry) + "\n")
 
 
 def main() -> None:
@@ -49,6 +69,7 @@ def main() -> None:
             if found:
                 outcome, how, planted = found
                 state.add(outcome, planted)
+                record_to_log(outcome, how, planted)
                 spike = ", spike planted" if planted else ""
                 print(f"  {time.strftime('%H:%M:%S')}  {LABEL[outcome]}{spike}"
                       f"  (from the {how}, {len(state.snapshot())} rounds seen)")
