@@ -95,6 +95,12 @@ by hand when you have seen what the other side is holding. That honesty is a
 direct consequence of the measurement above: the estimate is known to be
 imperfect, so the interface says so rather than printing a confident number.
 
+A match in progress survives a refresh, a closed tab, or a phone locking its
+screen - it is saved as it goes, and the round history is not something you
+could retype from memory. Restarting the watcher mid-match is also safe: it
+reports a new session id, which the app treats as "start counting again"
+rather than silently ignoring every round that follows.
+
 The match ends itself: first to 13 in regulation, and at 12-12 it goes to
 overtime, which is played in pairs so a team must take both rounds to win.
 Sides swap every round in overtime and both economies reset to $5,000.

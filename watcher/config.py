@@ -49,8 +49,11 @@ class WatcherConfig:
     change_fraction: float = 0.25
     # A new shape must persist this many samples before it is believed.
     stable_frames: int = 3
-    # A score cannot change twice within this many seconds.
-    debounce_seconds: float = 20.0
+    # A round cannot end twice inside this window. Buy phase alone is thirty
+    # seconds before a round that runs to a hundred, so consecutive round ends
+    # are a minute apart at the very least. Set at 20 originally, which let two
+    # spurious detections through in a live match at gaps of 27 and 30 seconds.
+    debounce_seconds: float = 35.0
     # How often to sample the screen.
     poll_seconds: float = 0.5
 
@@ -72,7 +75,7 @@ def load() -> WatcherConfig:
         enemy_score=Region(**raw["enemy_score"]),
         change_fraction=raw.get("change_fraction", 0.25),
         stable_frames=raw.get("stable_frames", 3),
-        debounce_seconds=raw.get("debounce_seconds", 20.0),
+        debounce_seconds=raw.get("debounce_seconds", 35.0),
         poll_seconds=raw.get("poll_seconds", 0.5),
     )
 

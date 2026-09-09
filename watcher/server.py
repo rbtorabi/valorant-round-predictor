@@ -11,6 +11,7 @@ web framework.
 
 import json
 import threading
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = 8731
@@ -22,6 +23,11 @@ class WatcherState:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._rounds: list[dict] = []
+        # Identifies this run. Restarting the watcher empties the round list,
+        # and a client tracking "how many have I applied" would otherwise stop
+        # applying anything at all - its count would stay above the length of
+        # a list that had gone back to zero.
+        self._session = uuid.uuid4().hex[:12]
 
     def add(self, outcome: str, planted: bool = False) -> None:
         with self._lock:
@@ -30,6 +36,12 @@ class WatcherState:
     def reset(self) -> None:
         with self._lock:
             self._rounds.clear()
+            self._session = uuid.uuid4().hex[:12]
+
+    @property
+    def session(self) -> str:
+        with self._lock:
+            return self._session
 
     def snapshot(self) -> list[dict]:
         with self._lock:
@@ -55,14 +67,22 @@ def make_handler(state: WatcherState):
 
         def do_GET(self) -> None:  # noqa: N802
             if self.path.startswith("/state"):
-                self._send({"watching": True, "rounds": state.snapshot()})
+                self._send({
+                    "watching": True,
+                    "session": state.session,
+                    "rounds": state.snapshot(),
+                })
             else:
                 self._send({"error": "not found"}, status=404)
 
         def do_POST(self) -> None:  # noqa: N802
             if self.path.startswith("/reset"):
                 state.reset()
-                self._send({"watching": True, "rounds": []})
+                self._send({
+                    "watching": True,
+                    "session": state.session,
+                    "rounds": [],
+                })
             else:
                 self._send({"error": "not found"}, status=404)
 

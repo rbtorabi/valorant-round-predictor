@@ -33,8 +33,33 @@ const CONFIDENCE_COPY: Record<ReturnType<typeof estimateConfidence>, string> = {
   rough: "estimate, drifting",
 };
 
+// A match in progress outlives a refresh, a closed tab, or a phone locking
+// its screen. Without this, reloading mid-match silently threw the whole thing
+// away - and the round history is not something you can retype from memory.
+const STORAGE_KEY = "valorant-round-predictor.match.v1";
+
+interface StoredMatch {
+  match: MatchState;
+  applied: number;
+}
+
+function readStored(): StoredMatch | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredMatch;
+    if (!parsed?.match || !Array.isArray(parsed.match.history)) return null;
+    return parsed;
+  } catch {
+    // private windows, cleared storage, a half-written value - all mean
+    // "start fresh" rather than "crash on load"
+    return null;
+  }
+}
+
 export default function MatchTracker() {
   const [match, setMatch] = useState<MatchState | null>(null);
+  const [restored, setRestored] = useState(false);
   const [setupMap, setSetupMap] = useState(
     MODEL.maps.includes("Ascent") ? "Ascent" : MODEL.maps[0]
   );
@@ -43,24 +68,64 @@ export default function MatchTracker() {
   const [autoStatus, setAutoStatus] = useState<"off" | "connecting" | "live" | "error">("off");
   // how many rounds from the watcher have already been applied to this match
   const appliedRef = useRef(0);
+  // which watcher run those came from, so a restart is recognised
+  const sessionRef = useRef<string | null>(null);
 
   const undo = () =>
     setMatch((prev) => (prev ? { ...prev, history: prev.history.slice(0, -1) } : prev));
 
+  // Restore once, on the client only - localStorage does not exist while the
+  // page is being rendered on the server.
+  useEffect(() => {
+    const stored = readStored();
+    if (stored) {
+      setMatch(stored.match);
+      appliedRef.current = stored.applied;
+    }
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return; // never write before the first read, or it wipes
+    try {
+      if (match) {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ match, applied: appliedRef.current })
+        );
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch {
+      // storage can be unavailable or full; losing the save is not worth
+      // taking the interface down over
+    }
+  }, [match, restored]);
+
   /**
    * Polls the local watcher, which reports round outcomes it saw on screen.
    *
-   * The watcher is a dumb sensor: it says "won" or "lost" and nothing else.
-   * All the match logic stays here, so the two cannot drift apart. It cannot
-   * see a spike plant, so plant bonuses still need a tap - which is why the
-   * plant buttons stay on screen in auto mode.
+   * The watcher is a dumb sensor: it reports an outcome and whether the spike
+   * was down, and nothing else. All the match logic stays here, so the two
+   * cannot drift apart. The buttons remain on screen for correcting a miss.
    */
   const pollWatcher = useCallback(async () => {
     try {
       const res = await fetch(`${WATCHER_URL}/state`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      const data: { rounds: { outcome: string; planted: boolean }[] } = await res.json();
+      const data: {
+        session?: string;
+        rounds: { outcome: string; planted: boolean }[];
+      } = await res.json();
       setAutoStatus("live");
+
+      // A restarted watcher hands back an empty list under a new session id.
+      // Without noticing that, the count of applied rounds stays above the
+      // length of the list forever and nothing is ever recorded again.
+      if (data.session && data.session !== sessionRef.current) {
+        sessionRef.current = data.session;
+        appliedRef.current = 0;
+      }
 
       const fresh = data.rounds.slice(appliedRef.current);
       if (fresh.length === 0) return;
@@ -159,6 +224,7 @@ export default function MatchTracker() {
             style={{ padding: "14px", fontFamily: "var(--display)", letterSpacing: "0.1em" }}
             onClick={() => {
               appliedRef.current = 0;
+              sessionRef.current = null;
               void fetch(`${WATCHER_URL}/reset`, { method: "POST" }).catch(() => {});
               setMatch(newMatch(setupMap, setupAttacking));
             }}
