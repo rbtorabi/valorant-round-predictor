@@ -22,7 +22,13 @@ DIGIT[8:18, 6:12] = 255.0
 
 
 def banner(name: str) -> np.ndarray:
-    return np.asarray(Image.open(TEMPLATE_DIR / f"{name}.png").convert("L")).astype(np.float32)
+    """Any stored example of a message - templates are named label[.n].png."""
+    matches = sorted(
+        p for p in TEMPLATE_DIR.glob(f"{name}*.png") if p.stem.split(".")[0] == name
+    )
+    if not matches:
+        raise FileNotFoundError(f"no template for {name!r}")
+    return np.asarray(Image.open(matches[0]).convert("L")).astype(np.float32)
 
 
 def blank_banner() -> np.ndarray:
