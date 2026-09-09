@@ -1,0 +1,79 @@
+"""Screen regions the watcher looks at, and where they are saved.
+
+Only two regions matter: the two score numbers at the top of the HUD. The
+watcher never reads what they say - it only notices when one of them changes,
+which is enough to know a round ended and who won it. That is why there is no
+OCR here, and why this works at any resolution or in any language.
+
+Defaults are expressed as fractions of the screen, because the HUD is centred
+and scales with resolution. They will be close on a standard 16:9 display and
+can be corrected in the saved config after checking `python -m watcher.preview`.
+"""
+
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "watcher.json"
+
+
+@dataclass
+class Region:
+    """A screen rectangle, in fractions of screen width and height."""
+
+    left: float
+    top: float
+    width: float
+    height: float
+
+    def to_pixels(self, screen_width: int, screen_height: int) -> dict:
+        return {
+            "left": int(self.left * screen_width),
+            "top": int(self.top * screen_height),
+            "width": max(1, int(self.width * screen_width)),
+            "height": max(1, int(self.height * screen_height)),
+        }
+
+
+@dataclass
+class WatcherConfig:
+    """Both score numbers, plus how twitchy the change detector should be."""
+
+    # The score sits either side of the round timer, top centre.
+    ally_score: Region = None  # type: ignore[assignment]
+    enemy_score: Region = None  # type: ignore[assignment]
+
+    # A pixel must differ by more than this (0-255) to count as changed.
+    pixel_threshold: int = 40
+    # And this fraction of the region must have changed, to ignore flicker.
+    change_fraction: float = 0.04
+    # A score cannot change twice within this many seconds.
+    debounce_seconds: float = 20.0
+    # How often to sample the screen.
+    poll_seconds: float = 0.5
+
+    def __post_init__(self) -> None:
+        if self.ally_score is None:
+            self.ally_score = Region(left=0.4590, top=0.0130, width=0.0230, height=0.0380)
+        if self.enemy_score is None:
+            self.enemy_score = Region(left=0.5180, top=0.0130, width=0.0230, height=0.0380)
+
+
+def load() -> WatcherConfig:
+    if not CONFIG_PATH.exists():
+        return WatcherConfig()
+    raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    return WatcherConfig(
+        ally_score=Region(**raw["ally_score"]),
+        enemy_score=Region(**raw["enemy_score"]),
+        pixel_threshold=raw.get("pixel_threshold", 40),
+        change_fraction=raw.get("change_fraction", 0.04),
+        debounce_seconds=raw.get("debounce_seconds", 20.0),
+        poll_seconds=raw.get("poll_seconds", 0.5),
+    )
+
+
+def save(config: WatcherConfig) -> Path:
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
+    return CONFIG_PATH

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MODEL, isOutOfDistribution } from "@/lib/model";
 import { adviseBuyOrSave } from "@/lib/advice";
 import {
@@ -17,6 +17,16 @@ import {
 
 const money = (n: number) => n.toLocaleString("en-US").replace(/,/g, " ");
 
+// The watcher runs on your own machine, beside the game.
+const WATCHER_URL = "http://127.0.0.1:8731";
+
+const AUTO_STATUS: Record<"off" | "connecting" | "live" | "error", string> = {
+  off: "you tap each round",
+  connecting: "looking for the watcher...",
+  live: "watching the scoreline",
+  error: "watcher not running",
+};
+
 const CONFIDENCE_COPY: Record<ReturnType<typeof estimateConfidence>, string> = {
   exact: "known exactly",
   good: "estimate, close",
@@ -29,9 +39,70 @@ export default function MatchTracker() {
     MODEL.maps.includes("Ascent") ? "Ascent" : MODEL.maps[0]
   );
   const [setupAttacking, setSetupAttacking] = useState(true);
+  const [auto, setAuto] = useState(false);
+  const [autoStatus, setAutoStatus] = useState<"off" | "connecting" | "live" | "error">("off");
+  // how many rounds from the watcher have already been applied to this match
+  const appliedRef = useRef(0);
 
   const undo = () =>
     setMatch((prev) => (prev ? { ...prev, history: prev.history.slice(0, -1) } : prev));
+
+  /**
+   * Polls the local watcher, which reports round outcomes it saw on screen.
+   *
+   * The watcher is a dumb sensor: it says "won" or "lost" and nothing else.
+   * All the match logic stays here, so the two cannot drift apart. It cannot
+   * see a spike plant, so plant bonuses still need a tap - which is why the
+   * plant buttons stay on screen in auto mode.
+   */
+  const pollWatcher = useCallback(async () => {
+    try {
+      const res = await fetch(`${WATCHER_URL}/state`, { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const data: { rounds: string[] } = await res.json();
+      setAutoStatus("live");
+
+      const fresh = data.rounds.slice(appliedRef.current);
+      if (fresh.length === 0) return;
+      appliedRef.current = data.rounds.length;
+
+      setMatch((prev) => {
+        if (!prev) return prev;
+        let next = prev;
+        for (const outcome of fresh) {
+          if (matchResult(next)) break; // stop at match point
+          if (outcome !== "won" && outcome !== "lost") continue;
+          next = {
+            ...next,
+            history: [
+              ...next.history,
+              {
+                round: currentRound(next),
+                outcome,
+                youAttacking: youAreAttacking(next),
+              },
+            ],
+            enemyCreditsOverride: null,
+            yourCreditsOverride: null,
+          };
+        }
+        return next;
+      });
+    } catch {
+      setAutoStatus("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!auto) {
+      setAutoStatus("off");
+      return;
+    }
+    setAutoStatus("connecting");
+    void pollWatcher();
+    const id = setInterval(() => void pollWatcher(), 2000);
+    return () => clearInterval(id);
+  }, [auto, pollWatcher]);
 
   if (!match) {
     return (
@@ -76,7 +147,11 @@ export default function MatchTracker() {
             type="button"
             className="control"
             style={{ padding: "14px", fontFamily: "var(--display)", letterSpacing: "0.1em" }}
-            onClick={() => setMatch(newMatch(setupMap, setupAttacking))}
+            onClick={() => {
+              appliedRef.current = 0;
+              void fetch(`${WATCHER_URL}/reset`, { method: "POST" }).catch(() => {});
+              setMatch(newMatch(setupMap, setupAttacking));
+            }}
           >
             START MATCH
           </button>
@@ -299,10 +374,53 @@ export default function MatchTracker() {
 
       <section className="panel">
         <div className="panel-head">
-          <span>What happened last round?</span>
+          <span>{auto ? "Watching the scoreline" : "What happened last round?"}</span>
           <span>{attacking ? "you were attacking" : "you were defending"}</span>
         </div>
         <div className="panel-body">
+          <div className="field">
+            <div className="field-row">
+              <span className="label">Record rounds</span>
+              <span className="muted">{AUTO_STATUS[autoStatus]}</span>
+            </div>
+            <div className="seg">
+              <button
+                type="button"
+                className="control"
+                aria-pressed={!auto}
+                onClick={() => setAuto(false)}
+              >
+                By hand
+              </button>
+              <button
+                type="button"
+                className="control"
+                aria-pressed={auto}
+                onClick={() => setAuto(true)}
+              >
+                Automatic
+              </button>
+            </div>
+          </div>
+
+          {auto && autoStatus === "error" && (
+            <div className="notice">
+              <b>Cannot reach the watcher</b>
+              <span>
+                Start it with <code>python -m watcher.run</code> in the project folder. If the
+                page is open on the deployed site, use the local one instead - a page served
+                over https is not allowed to talk to a program on your own machine.
+              </span>
+            </div>
+          )}
+
+          {auto && (
+            <div className="muted">
+              Wins and losses record themselves from the scoreline. A spike plant is worth $300
+              and cannot be seen in the score, so tap the plant buttons when it matters.
+            </div>
+          )}
+
           <div className="outcomes">
             <button type="button" className="win" onClick={() => record("won")}>
               Won

@@ -5,3 +5,5 @@ scikit-learn>=1.5
 lightgbm>=4.5
 matplotlib>=3.9
 tenacity>=9.0
+mss>=9.0
+pillow>=11.0

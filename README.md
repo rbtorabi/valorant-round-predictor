@@ -102,6 +102,38 @@ Sides swap every round in overtime and both economies reset to $5,000.
 Pistol rounds show no advice at all. Both sides have $800 and everyone buys,
 so there is no decision to make and pretending otherwise would be noise.
 
+## Recording rounds automatically
+
+`watcher/` is a small local program that removes the tapping. Run it beside the
+game, switch the app to **Automatic**, and wins and losses record themselves.
+
+```bash
+python -m watcher.preview   # check the regions are aimed at the score
+python -m watcher.run       # then leave this running
+```
+
+**It does not read the score, it only notices that the score changed.** If the
+left number's pixels move, you scored; if the right number's move, they did.
+That one decision removes OCR, fonts, digit templates, resolution handling and
+localisation from the problem - a round detector that works on any display in
+any language, built out of an image diff.
+
+Two guards keep it from firing on noise: a change has to move a meaningful
+fraction of the region rather than a few antialiased pixels, and a score cannot
+change twice inside twenty seconds because a round cannot end twice that fast.
+Both sides changing at once is refused outright, since that means a scoreboard
+overlay or an alt-tab rather than a round.
+
+What it cannot see is a spike plant, worth $300 to attackers, so the plant
+buttons stay on screen in automatic mode.
+
+The watcher is a sensor and nothing more: it reports `won` or `lost` over
+`http://127.0.0.1:8731/state`, and the web app owns every rule. Keeping the
+game logic in one place is what stops the two halves drifting apart.
+
+Reading your own screen is passive. Nothing touches the game process, reads its
+memory, or draws inside it.
+
 ## Where the data comes from
 
 Two pages are needed per match, because they carry different halves of a round:
