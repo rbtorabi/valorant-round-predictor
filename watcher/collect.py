@@ -7,12 +7,14 @@ gathers the evidence instead.
 
     python -m watcher.collect --seconds 300
 
-Writes numbered crops to data/collect/<region>/ plus a few full frames. Nothing
-is uploaded anywhere; the files sit on your disk for inspection.
+Each run writes to its own timestamped folder under data/collect/, so a new
+capture never mixes with the last one. Nothing is uploaded anywhere; the files
+sit on your disk for inspection.
 """
 
 import argparse
 import time
+from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
@@ -38,15 +40,20 @@ CANDIDATES = {
 def main() -> None:
     parser = argparse.ArgumentParser(description="Collect HUD samples while playing.")
     parser.add_argument("--seconds", type=float, default=300.0)
-    parser.add_argument("--every", type=float, default=2.0)
+    parser.add_argument("--every", type=float, default=1.5)
     parser.add_argument("--monitor", type=int, default=1)
     parser.add_argument("--full-every", type=int, default=15,
                         help="also save a whole frame this often, in samples")
     args = parser.parse_args()
 
+    # Each run gets its own folder. Writing into a shared one meant a new
+    # capture silently mixed with the previous one, and frames had to be told
+    # apart by modification time.
+    session = OUT_DIR / datetime.now().strftime("%Y%m%d-%H%M%S")
     for name in CANDIDATES:
-        (OUT_DIR / name).mkdir(parents=True, exist_ok=True)
-    (OUT_DIR / "full").mkdir(parents=True, exist_ok=True)
+        (session / name).mkdir(parents=True, exist_ok=True)
+    (session / "full").mkdir(parents=True, exist_ok=True)
+    print(f"writing to {session}")
 
     sct = open_screen()
     monitor = sct.monitors[args.monitor]
@@ -67,10 +74,10 @@ def main() -> None:
                     int((l + w) * width),
                     int((t + h) * height),
                 )
-                frame.crop(box).save(OUT_DIR / name / f"{index:04d}.png")
+                frame.crop(box).save(session / name / f"{index:04d}.png")
 
             if index % args.full_every == 0:
-                frame.save(OUT_DIR / "full" / f"{index:04d}.jpg", quality=70)
+                frame.save(session / "full" / f"{index:04d}.jpg", quality=70)
 
             index += 1
             if index % 15 == 0:
@@ -81,7 +88,7 @@ def main() -> None:
     finally:
         sct.close()
 
-    print(f"\nwrote {index} samples per region to {OUT_DIR}")
+    print(f"\nwrote {index} samples per region to {session}")
 
 
 if __name__ == "__main__":
