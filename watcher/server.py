@@ -28,6 +28,9 @@ class WatcherState:
         # applying anything at all - its count would stay above the length of
         # a list that had gone back to zero.
         self._session = uuid.uuid4().hex[:12]
+        # the last credit figure read off your HUD, or None when the
+        # number was not on screen or could not be read confidently
+        self._credits: int | None = None
 
     def add(self, outcome: str, planted: bool = False) -> None:
         with self._lock:
@@ -37,6 +40,18 @@ class WatcherState:
         with self._lock:
             self._rounds.clear()
             self._session = uuid.uuid4().hex[:12]
+        # the last credit figure read off your HUD, or None when the
+        # number was not on screen or could not be read confidently
+        self._credits: int | None = None
+
+    def set_credits(self, value: int | None) -> None:
+        with self._lock:
+            self._credits = value
+
+    @property
+    def credits(self) -> int | None:
+        with self._lock:
+            return self._credits
 
     @property
     def session(self) -> str:
@@ -71,6 +86,7 @@ def make_handler(state: WatcherState):
                     "watching": True,
                     "session": state.session,
                     "rounds": state.snapshot(),
+                    "credits": state.credits,
                 })
             else:
                 self._send({"error": "not found"}, status=404)

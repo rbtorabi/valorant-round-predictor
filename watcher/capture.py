@@ -17,6 +17,7 @@ except ImportError as exc:  # pragma: no cover - dependency guard
 
 from watcher.banner import BANNER_REGION
 from watcher.config import Region, WatcherConfig
+from watcher.digits import CREDITS_REGION
 from watcher.spike import TIMER_REGION
 
 
@@ -49,6 +50,10 @@ class ScreenSource:
         self.timer_box = self._absolute(
             Region(*TIMER_REGION).to_pixels(self.width, self.height)
         )
+        # your own credits, which unlike the enemy's are right there on screen
+        self.credits_box = self._absolute(
+            Region(*CREDITS_REGION).to_pixels(self.width, self.height)
+        )
 
     def _absolute(self, box: dict) -> dict:
         return {
@@ -70,13 +75,14 @@ class ScreenSource:
         pixels = np.asarray(shot)[:, :, :3].astype(np.float32)
         return pixels[:, :, ::-1]
 
-    def frames(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Ally score, enemy score, the message card, and the timer in colour."""
+    def frames(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Scores, the message card, the timer in colour, and your credits."""
         return (
             self._grab(self.ally_box),
             self._grab(self.enemy_box),
             self._grab(self.banner_box),
             self._grab_colour(self.timer_box),
+            self._grab(self.credits_box),
         )
 
     def close(self) -> None:

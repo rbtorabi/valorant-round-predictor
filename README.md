@@ -89,6 +89,12 @@ those with a plant. Both economies are carried forward from the credit rules,
 so you never type a number again, and the buy-or-save call is a single word
 readable at a glance.
 
+Your own credits are read off the HUD rather than estimated. The digits are
+matched against stored glyphs - no OCR, because the font never varies - and a
+glyph that matches nothing is reported as unreadable rather than guessed, so a
+misread never silently becomes a wrong economy. Order of trust is what you
+typed, then what was read, then the rules.
+
 Enemy credits are labelled with how much they can be trusted. They are exact
 at round 1, at halftime and in overtime, drift in between, and can be corrected
 by hand when you have seen what the other side is holding. That honesty is a
@@ -116,6 +122,14 @@ game, switch the app to **Automatic**, and wins and losses record themselves.
 ```bash
 python -m watcher.preview   # check the regions are aimed at the score
 python -m watcher.run       # then leave this running
+python -m watcher.run --debug   # ...or this, if something needs diagnosing
+```
+
+Tests cover the parts that fail silently - a missed round corrupts every
+economy estimate after it, and a misread digit does the same:
+
+```bash
+for m in detect banner rounds spike digits; do python -m watcher.test_$m; done
 ```
 
 Rounds are read from two independent signals. The stronger one is the HUD

@@ -20,6 +20,7 @@ from PIL import Image
 
 from watcher import config as config_module
 from watcher.banner import classify
+from watcher.digits import load_templates, read_number
 from watcher.spike import red_fraction
 from watcher.capture import ScreenSource
 from watcher.rounds import RoundSource
@@ -75,6 +76,9 @@ def main() -> None:
 
     samples = 0
     shots = 0
+    digit_templates = load_templates()
+    if not digit_templates:
+        print("note: no digit templates, so credits will not be read")
 
     print(f"watching monitor {args.monitor} at {source.width}x{source.height}")
     print(f"serving detected rounds on http://127.0.0.1:{args.port}/state")
@@ -85,7 +89,12 @@ def main() -> None:
 
     try:
         while True:
-            ally, enemy, banner, timer = source.frames()
+            ally, enemy, banner, timer, credits_crop = source.frames()
+
+            # Your own credits are on screen, so there is no reason to
+            # estimate them. An unreadable frame reports nothing rather
+            # than a guess, and the app falls back to its estimate.
+            state.set_credits(read_number(credits_crop, digit_templates))
 
             if args.debug:
                 # Recording what the signals saw is the only way to explain a
@@ -113,6 +122,7 @@ def main() -> None:
                     "ally_ink": round(float((ally > 240.0).mean()), 4),
                     "enemy_ink": round(float((enemy > 240.0).mean()), 4),
                     "red": round(red_fraction(timer), 3),
+                    "credits": state.credits,
                 })
                 samples += 1
 

@@ -66,6 +66,8 @@ export default function MatchTracker() {
   const [setupAttacking, setSetupAttacking] = useState(true);
   const [auto, setAuto] = useState(false);
   const [autoStatus, setAutoStatus] = useState<"off" | "connecting" | "live" | "error">("off");
+  // your credits as read off your own HUD, when the watcher can see them
+  const [liveCredits, setLiveCredits] = useState<number | null>(null);
   // how many rounds from the watcher have already been applied to this match
   const appliedRef = useRef(0);
   // which watcher run those came from, so a restart is recognised
@@ -115,9 +117,11 @@ export default function MatchTracker() {
       if (!res.ok) throw new Error(String(res.status));
       const data: {
         session?: string;
+        credits?: number | null;
         rounds: { outcome: string; planted: boolean }[];
       } = await res.json();
       setAutoStatus("live");
+      setLiveCredits(typeof data.credits === "number" ? data.credits : null);
 
       // A restarted watcher hands back an empty list under a new session id.
       // Without noticing that, the count of applied rounds stays above the
@@ -291,12 +295,17 @@ export default function MatchTracker() {
   const attacking = youAreAttacking(match);
   const sc = score(match);
   const eco = estimateEconomy(match);
+  // Your own credits are on your screen, so a reading beats an estimate.
+  // Order of trust: what you typed, then what the watcher read, then the
+  // rules. The enemy has no equivalent - nothing displays their money.
+  const yourCredits = match.yourCreditsOverride ?? liveCredits ?? eco.you;
+  const creditsAreRead = match.yourCreditsOverride === null && liveCredits !== null;
   const confidence = estimateConfidence(match);
-  const ood = isOutOfDistribution(round, eco.you, eco.them);
+  const ood = isOutOfDistribution(round, yourCredits, eco.them);
 
   const advice = adviseBuyOrSave({
     map: match.map,
-    youCredits: eco.you,
+    youCredits: yourCredits,
     themCredits: eco.them,
     scoreYou: sc.you,
     scoreThem: sc.them,
@@ -384,7 +393,7 @@ export default function MatchTracker() {
               <input
                 type="number"
                 className="v"
-                value={eco.you}
+                value={yourCredits}
                 min={0}
                 max={9000}
                 step={100}
@@ -403,7 +412,11 @@ export default function MatchTracker() {
               />
               <span className="muted">
                 {advice.yourBracket} &middot;{" "}
-                {match.yourCreditsOverride === null ? "estimated, type to correct" : "yours, exact"}
+                {match.yourCreditsOverride !== null
+                  ? "yours, typed"
+                  : creditsAreRead
+                    ? "read from your HUD"
+                    : "estimated, type to correct"}
               </span>
             </div>
             <div className="box">
