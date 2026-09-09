@@ -73,16 +73,18 @@ export default function MatchTracker() {
           if (matchResult(next)) break; // stop at match point
           if (seen.outcome !== "won" && seen.outcome !== "lost") continue;
 
-          // The plant bonus is paid to whoever was attacking, so a plant only
-          // changes your economy on your attacking rounds. The watcher sees
-          // the spike go down; it does not know whose it was.
+          // A plant is recorded whoever made it. The watcher sees the spike go
+          // down without knowing whose it was, and it does not need to: the
+          // bonus goes to whichever side was attacking that round, which the
+          // economy already works out from the round record. Dropping the flag
+          // on defending rounds would quietly cost the enemy the $300 they
+          // actually earned.
           const attacking = youAreAttacking(next);
-          const outcome: RoundOutcome =
-            seen.planted && attacking
-              ? seen.outcome === "won"
-                ? "won-planted"
-                : "lost-planted"
-              : (seen.outcome as RoundOutcome);
+          const outcome: RoundOutcome = seen.planted
+            ? seen.outcome === "won"
+              ? "won-planted"
+              : "lost-planted"
+            : (seen.outcome as RoundOutcome);
 
           next = {
             ...next,
